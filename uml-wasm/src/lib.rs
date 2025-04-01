@@ -27,12 +27,41 @@ fn on_mouse_move(callback: impl Fn(Event) -> () + 'static) {
     .forget();
 }
 
-fn on_click(callback: impl Fn(Event) -> () + 'static) {
-    EventListener::new(&window(), "click", move |e| {
+fn on_mouse_down(callback: impl Fn(Event) -> () + 'static) {
+    EventListener::new(&window(), "mousedown", move |e| {
         let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
         let x = event.client_x() as u32;
         let y = event.client_y() as u32;
-        let event = Event::Click { x, y };
+        let event = Event::MouseDown { x, y };
+        callback(event);
+    })
+    .forget();
+}
+
+fn on_mouse_up(callback: impl Fn(Event) -> () + 'static) {
+    EventListener::new(&window(), "mouseup", move |e| {
+        let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
+        let x = event.client_x() as u32;
+        let y = event.client_y() as u32;
+        let event = Event::MouseUp { x, y };
+        callback(event);
+    })
+    .forget();
+}
+
+fn on_key_down(callback: impl Fn(Event) -> () + 'static) {
+    EventListener::new(&window(), "keydown", move |e| {
+        let event = e.dyn_ref::<web_sys::KeyboardEvent>().unwrap_throw();
+        let event = Event::KeyDown { key: event.key() };
+        callback(event);
+    })
+    .forget();
+}
+
+fn on_key_up(callback: impl Fn(Event) -> () + 'static) {
+    EventListener::new(&window(), "keyup", move |e| {
+        let event = e.dyn_ref::<web_sys::KeyboardEvent>().unwrap_throw();
+        let event = Event::KeyUp { key: event.key() };
         callback(event);
     })
     .forget();
@@ -59,7 +88,10 @@ fn run() -> Result<(), JsValue> {
     };
 
     on_resize(event_handler);
-    on_click(event_handler);
+    on_mouse_down(event_handler);
+    on_mouse_up(event_handler);
     on_mouse_move(event_handler);
+    on_key_down(event_handler);
+    on_key_up(event_handler);
     Ok(())
 }
