@@ -1,0 +1,11 @@
+[package]
+name = "uml-wasm"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+wasm-bindgen = "0.2.100"
+uml-common = { path = "../uml-common" }
+
+[lib]
+crate-type = ["cdylib"]

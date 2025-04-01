@@ -1,0 +1,17 @@
+# https://taskfile.dev
+
+version: "3"
+
+tasks:
+  build-wasm:
+    cmds:
+      - wasm-pack build --target web --no-typescript --no-pack -d ../uml-server/wasm uml-wasm
+
+  run:
+    deps: [build-wasm]
+    cmds:
+      - cargo run --package uml-server
+
+  watch:
+    cmds:
+      - watchexec -re rs,js -w Taskfile.yml -w uml-server/src -w uml-common/src -w uml-wasm/src go-task run
