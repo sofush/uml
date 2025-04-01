@@ -1,28 +1,39 @@
-use std::sync::{Arc, Mutex};
-
+use event::Event;
 use gloo::{events::EventListener, utils::window};
 use html_canvas::HtmlCanvas;
 use log::Level;
-use uml_common::{
-    color::BLACK, document::Document, drawable::Drawable, elements::Rectangle,
-};
+use state::{SHARED_STATE, State};
+use uml_common::document::Document;
 use wasm_bindgen::prelude::*;
-use web_sys::Event;
 
+mod event;
 mod html_canvas;
+mod state;
 
-fn on_resize(event_handler: Arc<Mutex<impl FnMut(&Event) -> () + 'static>>) {
-    EventListener::new(&window(), "resize", move |e| {
-        let mut callback = event_handler.lock().unwrap();
-        callback(e);
+fn on_resize(callback: impl Fn(Event) -> () + 'static) {
+    EventListener::new(&window(), "resize", move |_| {
+        callback(Event::Resize);
     })
     .forget();
 }
 
-fn on_click(event_handler: Arc<Mutex<impl FnMut(&Event) -> () + 'static>>) {
+fn on_mouse_move(callback: impl Fn(Event) -> () + 'static) {
+    EventListener::new(&window(), "mousemove", move |e| {
+        let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
+        let x = event.client_x() as u32;
+        let y = event.client_y() as u32;
+        callback(Event::MouseMove { x, y });
+    })
+    .forget();
+}
+
+fn on_click(callback: impl Fn(Event) -> () + 'static) {
     EventListener::new(&window(), "click", move |e| {
-        let mut callback = event_handler.lock().unwrap();
-        callback(e);
+        let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
+        let x = event.client_x() as u32;
+        let y = event.client_y() as u32;
+        let event = Event::Click { x, y };
+        callback(event);
     })
     .forget();
 }
@@ -32,25 +43,23 @@ fn run() -> Result<(), JsValue> {
     console_log::init_with_level(Level::Debug).unwrap();
 
     let canvas = HtmlCanvas::new();
-    let mut document = Document::default();
-
     canvas.update_size();
 
-    let event_handler = Arc::new(Mutex::new(move |event: &Event| {
-        match event.type_().as_str() {
-            "resize" => canvas.update_size(),
-            "click" => {
-                document
-                    .elements()
-                    .push(Rectangle::new(0, 0, 50, 50, BLACK).into());
-            }
-            t => log::error!("Unhandled event of type {t}"),
-        };
+    let document = Document::default();
+    SHARED_STATE.set(Some(State::new(document, canvas)));
 
-        document.draw(&canvas);
-    }));
+    let event_handler = move |event: Event| {
+        SHARED_STATE.with_borrow_mut(|state| {
+            let Some(state) = state else {
+                panic!("State must always have a value.");
+            };
 
-    on_resize(Arc::clone(&event_handler));
-    on_click(Arc::clone(&event_handler));
+            state.handle_event(event);
+        })
+    };
+
+    on_resize(event_handler);
+    on_click(event_handler);
+    on_mouse_move(event_handler);
     Ok(())
 }
