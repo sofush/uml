@@ -1,6 +1,6 @@
-use crate::elements::Rectangle;
+use crate::{camera::Camera, elements::Rectangle};
 
 pub trait Canvas {
     #[allow(unused_variables)]
-    fn draw_rectangle(&self, rect: Rectangle);
+    fn draw_rectangle(&self, rect: Rectangle, camera: &Camera);
 }

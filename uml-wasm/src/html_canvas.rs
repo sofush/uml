@@ -1,4 +1,4 @@
-use uml_common::{canvas::Canvas, elements::Rectangle};
+use uml_common::{camera::Camera, canvas::Canvas, elements::Rectangle};
 use wasm_bindgen::JsCast;
 
 #[derive(Clone)]
@@ -35,11 +35,11 @@ impl HtmlCanvas {
 }
 
 impl Canvas for HtmlCanvas {
-    fn draw_rectangle(&self, rect: Rectangle) {
+    fn draw_rectangle(&self, rect: Rectangle, camera: &Camera) {
         self.context.set_fill_style_str(&rect.color().to_string());
         self.context.fill_rect(
-            rect.x() as f64,
-            rect.y() as f64,
+            rect.x() as f64 - camera.x(),
+            rect.y() as f64 - camera.y(),
             rect.width() as f64,
             rect.height() as f64,
         );

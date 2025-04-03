@@ -7,8 +7,6 @@ use state::{SHARED_STATE, State};
 use uml_common::document::Document;
 use wasm_bindgen::prelude::*;
 
-mod camera;
-mod cursor;
 mod event;
 mod html_canvas;
 mod mouse_button;
@@ -24,8 +22,8 @@ fn on_resize(callback: impl Fn(Event) -> () + 'static) {
 fn on_mouse_move(callback: impl Fn(Event) -> () + 'static) {
     EventListener::new(&window(), "mousemove", move |e| {
         let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
-        let x = event.client_x() as u32;
-        let y = event.client_y() as u32;
+        let x = event.client_x();
+        let y = event.client_y();
         callback(Event::MouseMove { x, y });
     })
     .forget();
@@ -34,8 +32,8 @@ fn on_mouse_move(callback: impl Fn(Event) -> () + 'static) {
 fn on_mouse_down(callback: impl Fn(Event) -> () + 'static) {
     EventListener::new(&window(), "mousedown", move |e| {
         let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
-        let x = event.client_x() as u32;
-        let y = event.client_y() as u32;
+        let x = event.client_x();
+        let y = event.client_y();
         let Ok(button) = MouseButton::try_from(event.button()) else {
             return;
         };
@@ -48,8 +46,8 @@ fn on_mouse_down(callback: impl Fn(Event) -> () + 'static) {
 fn on_mouse_up(callback: impl Fn(Event) -> () + 'static) {
     EventListener::new(&window(), "mouseup", move |e| {
         let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
-        let x = event.client_x() as u32;
-        let y = event.client_y() as u32;
+        let x = event.client_x();
+        let y = event.client_y();
         let Ok(button) = MouseButton::try_from(event.button()) else {
             return;
         };

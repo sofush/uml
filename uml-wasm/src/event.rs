@@ -5,9 +5,9 @@ use crate::mouse_button::MouseButton;
 #[derive(Clone)]
 pub enum Event {
     Resize,
-    MouseDown { button: MouseButton, x: u32, y: u32 },
-    MouseUp { button: MouseButton, x: u32, y: u32 },
-    MouseMove { x: u32, y: u32 },
+    MouseDown { button: MouseButton, x: i32, y: i32 },
+    MouseUp { button: MouseButton, x: i32, y: i32 },
+    MouseMove { x: i32, y: i32 },
     KeyDown { key: String },
     KeyUp { key: String },
 }
