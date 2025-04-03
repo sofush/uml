@@ -1,4 +1,4 @@
-use crate::{draw_context::Canvas, drawable::Drawable, elements::Element};
+use crate::{canvas::Canvas, drawable::Drawable, elements::Element};
 
 #[derive(Clone, Default)]
 pub struct Document {

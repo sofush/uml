@@ -1,5 +1,5 @@
 use super::Element;
-use crate::{color::Color, draw_context::Canvas, drawable::Drawable};
+use crate::{canvas::Canvas, color::Color, drawable::Drawable};
 
 #[derive(Clone, Copy)]
 pub struct Rectangle {
