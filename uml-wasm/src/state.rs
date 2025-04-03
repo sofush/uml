@@ -40,7 +40,9 @@ impl State {
         match event {
             Event::MouseDown { button, x, y } => {
                 self.mouse_buttons.insert(button);
-                let rect = Rectangle::new(x as u32, y as u32, 10, 10, BLACK);
+                let x = x + self.camera.x() as i32;
+                let y = y + self.camera.y() as i32;
+                let rect = Rectangle::new(x - 5, y - 5, 10, 10, BLACK);
                 self.document.elements().push(rect.into());
             }
             Event::MouseUp { button, .. } => {
