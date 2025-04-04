@@ -1,6 +1,6 @@
 use std::u8;
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Color {
     Rgb { red: u8, green: u8, blue: u8 },
 }

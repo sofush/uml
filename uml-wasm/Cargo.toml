@@ -27,6 +27,7 @@ features = [
     'KeyboardEvent',
     'WebSocket',
     'MouseEvent',
+		'TextMetrics',
 ]
 
 [lib]
