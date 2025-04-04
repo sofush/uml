@@ -57,6 +57,6 @@ impl From<Label> for Element {
 
 impl Drawable for Label {
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
-        canvas.draw_text(&self, camera);
+        canvas.draw_text(self, camera);
     }
 }
