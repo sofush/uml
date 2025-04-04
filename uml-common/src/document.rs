@@ -8,14 +8,17 @@ use crate::{
 
 #[derive(Clone, Default)]
 pub struct Document {
-    drawables: Vec<Element>,
+    elements: Vec<Element>,
 }
 
 impl Document {
-    pub fn elements(&mut self) -> &mut Vec<Element> {
-        &mut self.drawables
+    pub fn elements(&self) -> &Vec<Element> {
+        &self.elements
     }
-}
+
+    pub fn elements_mut(&mut self) -> &mut Vec<Element> {
+        &mut self.elements
+    }
 
 impl Drawable for Document {
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
