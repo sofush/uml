@@ -68,6 +68,7 @@ impl State {
                 self.keys_pressed.remove(&key);
             }
             Event::Resize => self.canvas.update_size(),
+            Event::Redraw => (),
         };
 
         {

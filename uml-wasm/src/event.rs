@@ -10,6 +10,7 @@ pub enum Event {
     MouseMove { x: i32, y: i32 },
     KeyDown { key: String },
     KeyUp { key: String },
+    Redraw,
 }
 
 impl Display for Event {
@@ -31,6 +32,7 @@ impl Display for Event {
             Event::KeyUp { key } => {
                 f.write_fmt(format_args!("KeyUp(\"{key}\")"))
             }
+            Event::Redraw => f.write_str("Redraw"),
         }
     }
 }
