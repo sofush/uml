@@ -20,8 +20,12 @@ impl Document {
         &mut self.elements
     }
 
-impl Drawable for Document {
-    fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
+    pub fn draw(
+        &self,
+        canvas: &impl Canvas,
+        camera: &Camera,
+        cursor_pos: (i32, i32),
+    ) {
         let clear_rect: Element =
             Rectangle::new(i32::MIN, i32::MIN, u32::MAX, u32::MAX, WHITE)
                 .into();
@@ -47,8 +51,20 @@ impl Drawable for Document {
             }
         }
 
-        for drawable in &self.drawables {
-            drawable.draw(canvas, camera);
+        for el in &self.elements {
+            if el.cursor_intersects(cursor_pos) {
+                let color = Color::Rgb {
+                    red: 255,
+                    green: 0,
+                    blue: 0,
+                };
+                let x = 50.0;
+                let y = 50.0;
+                let rect = Rectangle::new(x as _, y as _, 50, 50, color);
+                rect.draw_fixed(canvas);
+            }
+
+            el.draw(canvas, camera);
         }
     }
 }
