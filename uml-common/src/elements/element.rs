@@ -6,7 +6,7 @@ use crate::{
     interaction::{Interactable, InteractionState},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Element {
     Rectangle(Rectangle),
     Label(Label),

@@ -6,7 +6,7 @@ use crate::{
     elements::{Element, Rectangle},
 };
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Document {
     elements: Vec<Element>,
     color: Color,

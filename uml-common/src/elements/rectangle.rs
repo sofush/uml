@@ -6,7 +6,7 @@ use crate::{
     interaction::{Interactable, InteractionState},
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Rectangle {
     x: i32,
     y: i32,
