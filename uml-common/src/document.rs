@@ -6,9 +6,10 @@ use crate::{
     elements::{Element, Rectangle},
 };
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Document {
     elements: Vec<Element>,
+    color: Color,
 }
 
 impl Document {
@@ -27,7 +28,7 @@ impl Document {
         cursor_pos: (i32, i32),
     ) {
         let clear_rect: Element =
-            Rectangle::new(i32::MIN, i32::MIN, u32::MAX, u32::MAX, WHITE)
+            Rectangle::new(i32::MIN, i32::MIN, u32::MAX, u32::MAX, self.color)
                 .into();
         clear_rect.draw(canvas, camera);
 
@@ -65,6 +66,19 @@ impl Document {
             }
 
             el.draw(canvas, camera);
+        }
+    }
+}
+
+impl Default for Document {
+    fn default() -> Self {
+        Self {
+            color: Color::Rgb {
+                red: 240,
+                green: 240,
+                blue: 240,
+            },
+            elements: Default::default(),
         }
     }
 }
