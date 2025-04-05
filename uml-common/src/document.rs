@@ -1,7 +1,7 @@
 use crate::{
     camera::Camera,
     canvas::Canvas,
-    color::{Color, WHITE},
+    color::Color,
     drawable::Drawable,
     elements::{Element, Rectangle},
 };
