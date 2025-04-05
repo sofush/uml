@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{
     camera::Camera,
     canvas::Canvas,
@@ -6,13 +8,14 @@ use crate::{
     interaction::{Interactable, InteractionState},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Rectangle {
     x: i32,
     y: i32,
     width: u32,
     height: u32,
     color: Color,
+    #[serde(skip)]
     interaction_state: InteractionState,
 }
 

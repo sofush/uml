@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{
     camera::Camera,
     canvas::Canvas,
@@ -8,13 +10,14 @@ use crate::{
 
 use super::TextProperties;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Label {
     x: i32,
     y: i32,
     text: String,
     properties: TextProperties,
     color: Color,
+    #[serde(skip)]
     interaction_state: InteractionState,
 }
 

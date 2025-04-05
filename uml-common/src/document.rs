@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{
     camera::Camera,
     canvas::Canvas,
@@ -6,7 +8,7 @@ use crate::{
     elements::{Element, Rectangle},
 };
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Document {
     elements: Vec<Element>,
     color: Color,
