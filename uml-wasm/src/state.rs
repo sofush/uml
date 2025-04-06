@@ -1,4 +1,10 @@
-use crate::{event::Event, html_canvas::HtmlCanvas, mouse_button::MouseButton};
+use crate::{
+    event::Event,
+    html_canvas::HtmlCanvas,
+    mouse_button::MouseButton,
+    wsclient::{WsClient, WsEvent},
+};
+use gloo::timers::callback::Timeout;
 use std::{cell::RefCell, collections::HashSet, thread_local};
 use uml_common::{
     camera::Camera,
@@ -14,6 +20,16 @@ thread_local! {
 
 const TRANSLATE_KEY: &str = " ";
 
+pub fn handle_event(event: Event) {
+    SHARED_STATE.with_borrow_mut(|state| {
+        let Some(state) = state else {
+            panic!("State must always have a value.");
+        };
+
+        state.handle_event(event);
+    })
+}
+
 pub struct State {
     document: Document,
     canvas: HtmlCanvas,
@@ -22,11 +38,13 @@ pub struct State {
     cursor_pos: (i32, i32),
     mouse_buttons: HashSet<MouseButton>,
     translate_camera: bool,
+    ws: Option<WsClient>,
 }
 
 impl State {
     pub fn new(document: Document, canvas: HtmlCanvas) -> Self {
         Self {
+            ws: None,
             document,
             canvas,
             camera: Camera::default(),
@@ -68,7 +86,32 @@ impl State {
                 self.keys_pressed.remove(&key);
             }
             Event::Resize => self.canvas.update_size(),
-            Event::Redraw => (),
+            Event::Initialize => {
+                self.ws = WsClient::new().ok();
+
+                if self.ws.is_none() {
+                    static DELAY: u32 = 500;
+
+                    log::debug!(
+                        "WebSocket connection failed, retrying in {DELAY}ms..."
+                    );
+
+                    Timeout::new(DELAY, move || {
+                        self::handle_event(Event::Initialize);
+                    })
+                    .forget();
+                }
+            }
+            Event::WebSocket(ev) => match ev {
+                WsEvent::Received(msg) => {
+                    log::trace!("Received WebSocket message: {msg:?}");
+                }
+                WsEvent::SendError(e) | WsEvent::ReceiveError(e) => {
+                    log::error!("Websocket error: {e:?}");
+                    self.handle_event(Event::Initialize);
+                    return;
+                }
+            },
         };
 
         {

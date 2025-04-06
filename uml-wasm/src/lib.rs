@@ -11,6 +11,7 @@ mod event;
 mod html_canvas;
 mod mouse_button;
 mod state;
+mod wsclient;
 
 fn add_event_listener(
     event: &'static str,
@@ -77,7 +78,7 @@ fn on_key_up(callback: impl Fn(Event) + 'static) {
 }
 
 #[wasm_bindgen(start)]
-fn run() -> Result<(), JsValue> {
+async fn run() -> Result<(), JsValue> {
     console_log::init_with_level(Level::Debug).unwrap();
 
     let canvas = HtmlCanvas::new();
@@ -86,23 +87,13 @@ fn run() -> Result<(), JsValue> {
     let document = Document::default();
     SHARED_STATE.set(Some(State::new(document, canvas)));
 
-    let event_handler = move |event: Event| {
-        SHARED_STATE.with_borrow_mut(|state| {
-            let Some(state) = state else {
-                panic!("State must always have a value.");
-            };
+    state::handle_event(Event::Initialize);
 
-            state.handle_event(event);
-        })
-    };
-
-    event_handler(Event::Redraw);
-
-    on_resize(event_handler);
-    on_mouse_down(event_handler);
-    on_mouse_up(event_handler);
-    on_mouse_move(event_handler);
-    on_key_down(event_handler);
-    on_key_up(event_handler);
+    on_resize(state::handle_event);
+    on_mouse_down(state::handle_event);
+    on_mouse_up(state::handle_event);
+    on_mouse_move(state::handle_event);
+    on_key_down(state::handle_event);
+    on_key_up(state::handle_event);
     Ok(())
 }

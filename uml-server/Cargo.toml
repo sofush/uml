@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 uml-common = { path = "../uml-common" }
+actix = "^0.13"
 actix-web = "4"
 actix-files = "0.6.6"
 actix-ws = "0.3.0"
