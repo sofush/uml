@@ -8,7 +8,7 @@ use crate::{
     elements::{Element, Rectangle},
 };
 
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Document {
     elements: Vec<Element>,
     color: Color,

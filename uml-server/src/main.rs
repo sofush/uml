@@ -7,12 +7,13 @@ use actix_web::{
     App, Error, HttpRequest, HttpResponse, HttpServer, Responder, middleware,
     web,
 };
-use client_handler::ClientHandler;
 use env_logger::Env;
+use futures_util::StreamExt;
 use state::State;
 use tokio::sync::Mutex;
 
 mod client_handler;
+mod id;
 mod state;
 
 async fn index() -> impl Responder {
@@ -30,27 +31,26 @@ pub async fn websocket(
 
     let mut stream = stream
         .aggregate_continuations()
-        .max_continuation_size(2_usize.pow(20));
+        .max_continuation_size(2_usize.pow(20))
+        .fuse();
 
-    let task_handle = rt::spawn(async move {
-        let mut handler = ClientHandler::new(session);
+    let (tx, rx) = tokio::sync::mpsc::channel(1000);
 
-        while let Some(msg) = stream.recv().await {
-            let res = match msg {
-                Ok(m) => handler.handle(m).await,
-                Err(e) => {
-                    log::error!("Websocket error: {e}");
-                    break;
-                }
-            };
-
-            if let Err(actix_ws::Closed) = res {
+    rt::spawn(async move {
+        while let Some(Ok(msg)) = stream.next().await {
+            if tx.send(msg).await.is_err() {
                 break;
-            }
+            };
         }
     });
 
-    state.get_ref().lock().await.add_connection(task_handle);
+    state
+        .get_ref()
+        .lock()
+        .await
+        .add_connection(session, rx)
+        .await;
+
     Ok(res)
 }
 
@@ -77,6 +77,6 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await?;
 
-    data_clone.get_ref().lock().await.close_connections();
+    data_clone.get_ref().lock().await.close_connections().await;
     Ok(())
 }
