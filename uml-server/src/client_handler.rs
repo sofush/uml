@@ -28,7 +28,7 @@ impl ClientHandler {
 
     pub async fn read(&mut self) -> Option<(Id, String, Document)> {
         let msg = self.stream.recv().await?;
-        log::debug!("Received WebSocket message: {msg:?}");
+        log::trace!("Received WebSocket message: {msg:?}");
 
         let Text(text) = msg else {
             return None;
