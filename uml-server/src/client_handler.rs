@@ -53,6 +53,10 @@ impl ClientHandler {
         };
         let _ = self.session.close(Some(close_reason)).await;
     }
+
+    pub fn is_closed(&self) -> bool {
+        self.stream.is_closed()
+    }
 }
 
 impl PartialEq for ClientHandler {
