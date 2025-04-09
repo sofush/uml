@@ -1,12 +1,10 @@
-use actix_files::Files;
-use actix_files::NamedFile;
 use actix_web::rt;
 use actix_web::web::Data;
 use actix_web::web::Payload;
 use actix_web::{
-    App, Error, HttpRequest, HttpResponse, HttpServer, Responder, middleware,
-    web,
+    App, Error, HttpRequest, HttpResponse, HttpServer, middleware, web,
 };
+use actix_web_static_files::ResourceFiles;
 use env_logger::Env;
 use futures_util::StreamExt;
 use state::State;
@@ -16,11 +14,7 @@ mod client_handler;
 mod id;
 mod state;
 
-async fn index() -> impl Responder {
-    NamedFile::open_async("./uml-server/static/index.html")
-        .await
-        .unwrap()
-}
+include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 
 pub async fn websocket(
     req: HttpRequest,
@@ -62,18 +56,16 @@ async fn main() -> std::io::Result<()> {
     let data_clone = data.clone();
 
     HttpServer::new(move || {
+        let static_files = gen_wasm_files();
+
         App::new()
             .app_data(data.clone())
-            .service(web::resource("/").to(index))
-            .service(
-                Files::new("/static", "./uml-server/static").prefer_utf8(true),
-            )
-            .service(Files::new("/wasm", "./uml-wasm/wasm").prefer_utf8(true))
+            .service(ResourceFiles::new("/static", static_files))
             .service(web::resource("/websocket").to(websocket))
             .wrap(middleware::NormalizePath::trim())
             .wrap(middleware::Logger::default())
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(("0.0.0.0", 8080))?
     .run()
     .await?;
 
