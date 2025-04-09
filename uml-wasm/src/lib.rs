@@ -4,7 +4,6 @@ use html_canvas::HtmlCanvas;
 use log::Level;
 use mouse_button::MouseButton;
 use state::{SHARED_STATE, State};
-use uml_common::document::Document;
 use wasm_bindgen::prelude::*;
 
 mod event;
@@ -84,8 +83,7 @@ async fn run() -> Result<(), JsValue> {
     let canvas = HtmlCanvas::new();
     canvas.update_size();
 
-    let document = Document::default();
-    SHARED_STATE.set(Some(State::new(document, canvas)));
+    SHARED_STATE.set(Some(State::new(canvas)));
 
     state::handle_event(Event::Initialize);
 

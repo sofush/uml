@@ -28,6 +28,7 @@ async fn wait_for_message(
 #[derive(Default)]
 pub struct State {
     handlers: Arc<Mutex<Vec<ClientHandler>>>,
+    document: Arc<Mutex<Document>>,
     task: Option<task::JoinHandle<()>>,
 }
 
@@ -38,15 +39,33 @@ impl State {
         rx: Receiver<AggregatedMessage>,
     ) {
         let handlers = Arc::clone(&self.handlers);
+        let document = Arc::clone(&self.document);
 
         self.task.as_ref().map(|t| t.abort());
         self.task = Some(rt::spawn(async move {
-            let handlers = &mut handlers.lock().await;
-            let client = ClientHandler::new(session, rx);
+            let mut handlers = handlers.lock().await;
+            let mut document = document.lock().await;
+            let mut client = ClientHandler::new(session, rx);
             let id = client.id();
-            handlers.push(client);
 
-            log::debug!("Add ClientHandler with ID {}", id);
+            let json = serde_json::to_string(&*document);
+
+            if let Ok(json) = json {
+                if client.send(json).await.is_ok() {
+                    handlers.push(client);
+                    log::debug!("Added ClientHandler with ID {}", id);
+                } else {
+                    log::warn!(
+                        "Attempted to add client with ID {}, but connection is closed.",
+                        id
+                    );
+                };
+            } else {
+                log::error!(
+                    "New client with ID {} was not sent the document as it couldn't be deserialized.",
+                    id
+                );
+            }
 
             loop {
                 handlers.retain(|handler| {
@@ -59,12 +78,14 @@ impl State {
                     !closed
                 });
 
-                let Some((sender_id, json, _doc)) =
-                    wait_for_message(handlers).await
+                let Some((sender_id, json, doc)) =
+                    wait_for_message(&mut handlers).await
                 else {
                     log::debug!("A client has disconnected.");
                     continue;
                 };
+
+                *document = doc;
 
                 for handler in handlers.iter_mut() {
                     if handler.id() != sender_id {
@@ -84,49 +105,3 @@ impl State {
         }
     }
 }
-
-// let handler = Arc::new(Mutex::new(ClientHandler::new(session)));
-// let handler_clone = handler.clone();
-// let clients = self.clients.clone();
-//
-// let task_handle = rt::spawn(async move {
-//     while let Some(msg) = stream.recv().await {
-//         let res = match msg {
-//             Ok(msg) => {
-//                 let mut handler = handler.lock().await;
-//                 handler.handle(msg).await
-//             }
-//             Err(e) => {
-//                 log::error!(
-//                     "ClientHandler failed to handle message: {e}"
-//                 );
-//                 break;
-//             }
-//         };
-//
-//         let Some((json, document)) = res else {
-//             log::debug!(
-//                 "WebSocket received message could not be deserialized to a valid document."
-//             );
-//             continue;
-//         };
-//
-//         let clients = clients.lock().await;
-//
-//         for client in clients.iter() {
-//             if Arc::ptr_eq(&client.handler, &handler) {
-//                 continue;
-//             }
-//
-//             let mut handler = client.handler.lock().await;
-//             handler.send(json.clone()).await;
-//         }
-//     }
-// });
-//
-// let mut clients = self.clients.lock().await;
-//
-// clients.push(Client {
-//     handler: handler_clone,
-//     task_handle,
-// });

@@ -31,7 +31,7 @@ pub fn handle_event(event: Event) {
 }
 
 pub struct State {
-    document: Document,
+    document: Option<Document>,
     canvas: HtmlCanvas,
     camera: Camera,
     keys_pressed: HashSet<String>,
@@ -42,10 +42,10 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(document: Document, canvas: HtmlCanvas) -> Self {
+    pub fn new(canvas: HtmlCanvas) -> Self {
         Self {
             ws: None,
-            document,
+            document: None,
             canvas,
             camera: Camera::default(),
             keys_pressed: HashSet::new(),
@@ -107,11 +107,11 @@ impl State {
                     log::trace!("Received WebSocket message: {msg:?}");
 
                     if let Message::Text(text) = msg {
-                        if let Ok(document) =
+                        if let Ok(mut document) =
                             serde_json::from_str::<Document>(&text)
                         {
-                            self.document = document;
-                            self.document.assume_sync();
+                            document.assume_sync();
+                            self.document = Some(document);
                         }
                     }
                 }
@@ -130,11 +130,13 @@ impl State {
         }
 
         if let Event::MouseDown { x, y, .. } = event {
-            if !self.translate_camera {
-                let x = x + self.camera.x() as i32;
-                let y = y + self.camera.y() as i32;
-                let rect = Rectangle::new(x, y, 100, 100, BLACK, Some(3));
-                self.document.add_element(rect);
+            if let Some(document) = &mut self.document {
+                if !self.translate_camera {
+                    let x = x + self.camera.x() as i32;
+                    let y = y + self.camera.y() as i32;
+                    let rect = Rectangle::new(x, y, 100, 100, BLACK, Some(3));
+                    document.add_element(rect);
+                }
             }
         }
 
@@ -143,7 +145,9 @@ impl State {
             self.cursor_pos.1 + self.camera.y() as i32,
         );
 
-        self.document.draw(&self.canvas, &self.camera, cursor_pos);
+        if let Some(document) = &self.document {
+            document.draw(&self.canvas, &self.camera, cursor_pos);
+        }
 
         if self.translate_camera {
             let props = TextProperties::new(20.0, "Arial");
@@ -156,7 +160,11 @@ impl State {
     }
 
     pub fn sync_document(&mut self) {
-        if self.document.synchronized() {
+        let Some(document) = &mut self.document else {
+            return;
+        };
+
+        if document.synchronized() {
             return;
         }
 
@@ -167,13 +175,13 @@ impl State {
             return;
         };
 
-        let Ok(document_json) = serde_json::to_string(&self.document) else {
+        let Ok(document_json) = serde_json::to_string(document) else {
             log::error!("Serialization of document failed.");
             return;
         };
 
         log::trace!("Attempting to synchronize document.");
         ws.send(vec![Message::Text(document_json)]);
-        self.document.assume_sync();
+        document.assume_sync();
     }
 }
