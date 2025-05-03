@@ -1,3 +1,3 @@
 [workspace]
 resolver = "2"
-members = ["uml-common", "uml-server", "uml-wasm"]
+members = ["uml-common", "uml-server", "uml-test", "uml-wasm"]

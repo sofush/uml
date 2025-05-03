@@ -1925,6 +1925,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "uml-test"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "futures",
+ "rand 0.8.5",
+ "rand_derive2",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "uml-wasm"
 version = "0.1.0"
 dependencies = [
