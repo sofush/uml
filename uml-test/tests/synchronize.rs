@@ -1,183 +1,127 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::bail;
 use futures::future::{self, join_all};
-use rand::{Rng, thread_rng};
-use tokio::io::{self, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use rand::{Rng, thread_rng as rng};
+use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
+use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::Mutex;
-use tokio::task::JoinHandle;
-use uml_test::diagram::Diagram;
+use tokio::time::sleep;
 
 const SOCKET_ADDRESS: &str = "127.0.0.1:9999";
 const NUM_CLIENTS: usize = 100;
+const NUM_ITERATIONS: usize = 30;
 
-pub struct DiagramWriter {
-    inner: Box<&'static mut (dyn AsyncWrite + Unpin)>,
-}
-
-pub struct DiagramReader {
-    inner: Box<&'static mut (dyn AsyncRead + Unpin)>,
-    cached_diagram: Diagram,
-}
-
-impl DiagramWriter {
-    pub async fn write(&mut self, diagram: Diagram) -> anyhow::Result<()> {
-        let json = serde_json::to_string(&diagram)?;
-        self.inner.write_u32(json.len() as _).await?;
-        self.inner.write(json.as_bytes()).await?;
-        Ok(())
-    }
-}
-
-impl DiagramReader {
-    pub async fn read(&mut self) -> anyhow::Result<Diagram> {
-        let size = self.inner.read_u32().await? as usize;
-        let mut buf = vec![0u8; size];
-        let read = self.inner.read(&mut buf).await?;
-
-        if size != read {
-            bail!("Could not read diagram.");
-        }
-
-        let diagram: Diagram = serde_json::from_slice(&buf)?;
-        self.cached_diagram = diagram.clone();
-        Ok(diagram)
-    }
-}
-
-// pub async fn write_diagram(
-//     writer: &mut (impl AsyncWriteExt + Unpin),
-//     diagram: &Diagram,
-// ) -> io::Result<()> {
-//     let json: String =
-//         serde_json::to_string(diagram).expect("diagram is always serializable");
-//
-//     writer.write_u32(json.len() as u32).await?;
-//     writer.write_all(json.as_bytes()).await
-// }
-//
-// pub async fn read_diagram<W: AsyncReadExt + Unpin>(
-//     reader: &mut W,
-// ) -> io::Result<Diagram> {
-//     let size = reader.read_u32().await?;
-//     let mut buf = vec![0u8; size as usize];
-//     reader.read_exact(&mut buf).await?;
-//
-//     let json =
-//         String::from_utf8(buf).expect("messages should always be vaild UTF-8");
-//     let diagram =
-//         serde_json::from_str(&json).expect("diagram is always serializable");
-//
-//     Ok(diagram)
+// #[derive(Debug, Clone, Copy, RandGen)]
+// pub enum Change {
+//     Add(i32),
+//     Subtract(i32),
 // }
 
-pub async fn run_client(idx: usize) -> io::Result<Diagram> {
+// #[derive(Debug, Clone, Copy)]
+// pub struct Synced(i32);
+//
+// impl Synced {
+//     pub fn increment(&mut self) {
+//         self.0 += 1;
+//     }
+//     // pub fn apply(&mut self, change: Change) {
+//     //     match change {
+//     //         Add(num) => self.0 += num,
+//     //         Subtract(num) => self.0 -= num,
+//     //     }
+//     // }
+// }
+
+pub async fn run_client() -> anyhow::Result<i32> {
     let stream = TcpStream::connect(SOCKET_ADDRESS).await?;
-    let (mut reader, mut writer) = stream.into_split();
-    let (tx, mut rx) = tokio::sync::mpsc::channel::<Diagram>(1);
-    println!("Client {idx} connected to the server.");
+    let (reader, writer) = stream.into_split();
 
-    let handle: JoinHandle<tokio::io::Result<()>> = tokio::spawn(async move {
-        loop {
-            let diagram = read_diagram(&mut reader).await?;
-            tx.send(diagram).await.unwrap();
-        }
-    });
+    let synced = Arc::new(Mutex::new(0));
+    let tasks = vec![
+        tokio::spawn(send_changes(writer, Arc::clone(&synced))),
+        tokio::spawn(read_changes(reader, Arc::clone(&synced))),
+    ];
 
-    let mut cached_diagram = Diagram::default();
-    let dur = Duration::from_millis(thread_rng().gen_range(500..800));
-    let mut interval = tokio::time::interval(dur);
-
-    loop {
-        tokio::select! {
-            _ = interval.tick() => {
-                let new_diagram = apply_random_change(&cached_diagram);
-
-                println!("Client {idx} is sending its changes.");
-
-                if write_diagram(&mut writer, &new_diagram).await.is_err() {
-                    continue;
-                };
-            }
-            value = rx.recv() => {
-                println!("Client {idx} received a new value.");
-
-                cached_diagram = match value {
-                    Some(v) => v,
-                    None => break,
-                }
-            }
-        }
-    }
-
-    let _ = handle.await;
-
-    println!("Client {idx} is closing...");
-    Ok(cached_diagram)
+    join_all(tasks).await;
+    Ok(*synced.lock().await)
 }
 
-pub async fn run_server() -> io::Result<Diagram> {
+pub async fn send_changes(mut writer: OwnedWriteHalf, synced: Arc<Mutex<i32>>) {
+    let mut write = async move || {
+        let n = *synced.lock().await;
+        writer.write_i32(n + 1).await
+    };
+
+    while write().await.is_ok() {
+        let ms = rng().gen_range(15..35);
+        sleep(Duration::from_millis(ms)).await;
+    }
+}
+
+pub async fn read_changes(mut reader: OwnedReadHalf, synced: Arc<Mutex<i32>>) {
+    while let Ok(n) = reader.read_i32().await {
+        *synced.lock().await = n;
+    }
+}
+
+pub async fn handle_client(
+    mut reader: OwnedReadHalf,
+    writers: Arc<Mutex<Vec<OwnedWriteHalf>>>,
+    synced: Arc<Mutex<i32>>,
+) {
+    for _ in 0..NUM_ITERATIONS {
+        let Ok(new_value) = reader.read_i32().await else {
+            break;
+        };
+
+        *synced.lock().await = new_value;
+
+        for writer in writers.lock().await.iter_mut() {
+            let _ = writer.write_i32(new_value).await;
+            let _ = writer.flush().await;
+        }
+    }
+}
+
+pub async fn run_server() -> io::Result<i32> {
     let listener = TcpListener::bind(SOCKET_ADDRESS).await?;
-    let mut readers = vec![];
-    let mut writers = vec![];
+    let writers = Arc::new(Mutex::new(vec![]));
+    let synced = Arc::new(Mutex::new(0));
+    let mut tasks = vec![];
 
     for _ in 0..NUM_CLIENTS {
-        let (client, addr) = listener.accept().await?;
-        let (reader, writer) = client.into_split();
-        println!("Client with port {} has connected.", addr.port());
-        readers.push(reader);
-        writers.push(writer);
+        let (stream, _) = listener.accept().await?;
+        let (reader, writer) = stream.into_split();
+
+        writers.lock().await.push(writer);
+        tasks.push(handle_client(
+            reader,
+            Arc::clone(&writers),
+            Arc::clone(&synced),
+        ));
     }
 
-    let writers = Arc::new(Mutex::new(writers));
-    let cached_diagram = Arc::new(Mutex::new(Diagram::default()));
-    let mut reader_futures = vec![];
-
-    for mut reader in readers.into_iter() {
-        let writers = writers.clone();
-        let cached_diagram = cached_diagram.clone();
-
-        let fut = tokio::spawn(async move {
-            let Ok(diagram) = read_diagram(&mut reader).await else {
-                return;
-            };
-
-            *cached_diagram.lock().await = diagram.clone();
-
-            for writer in writers.lock().await.iter_mut() {
-                write_diagram(writer, &diagram).await.unwrap();
-                writer.flush().await.unwrap();
-            }
-        });
-
-        reader_futures.push(fut);
-    }
-
-    join_all(reader_futures).await;
-
-    println!("Server is closing...");
-    Ok(cached_diagram.lock().await.clone())
+    join_all(tasks).await;
+    Ok(*synced.lock().await)
 }
 
 #[tokio::test]
 async fn synchronize() -> anyhow::Result<()> {
-    let server_handle = tokio::spawn(async { run_server().await });
     let client_handles = (0..NUM_CLIENTS)
-        .map(|idx| tokio::spawn(async move { run_client(idx).await }))
+        .map(|_| tokio::spawn(async move { run_client().await }))
         .collect::<Vec<_>>();
 
-    let diagram = server_handle
-        .await
-        .expect("server should not return an error")?;
+    let num = run_server().await?;
+    eprintln!("{num}");
 
     future::join_all(client_handles)
         .await
         .into_iter()
         .map(|result| result.expect("all futures should be joinable"))
         .map(|result| result.expect("no client should return an error"))
-        .for_each(|ret| assert_eq!(ret, diagram));
+        .for_each(|ret| assert_eq!(ret, num));
 
     Ok(())
 }
