@@ -34,7 +34,7 @@ const NUM_ITERATIONS: usize = 30;
 //     // }
 // }
 
-pub async fn run_client() -> anyhow::Result<i32> {
+async fn run_client() -> anyhow::Result<i32> {
     let stream = TcpStream::connect(SOCKET_ADDRESS).await?;
     let (reader, writer) = stream.into_split();
 
@@ -48,7 +48,7 @@ pub async fn run_client() -> anyhow::Result<i32> {
     Ok(*synced.lock().await)
 }
 
-pub async fn send_changes(mut writer: OwnedWriteHalf, synced: Arc<Mutex<i32>>) {
+async fn send_changes(mut writer: OwnedWriteHalf, synced: Arc<Mutex<i32>>) {
     let mut write = async move || {
         let n = *synced.lock().await;
         writer.write_i32(n + 1).await
@@ -60,13 +60,13 @@ pub async fn send_changes(mut writer: OwnedWriteHalf, synced: Arc<Mutex<i32>>) {
     }
 }
 
-pub async fn read_changes(mut reader: OwnedReadHalf, synced: Arc<Mutex<i32>>) {
+async fn read_changes(mut reader: OwnedReadHalf, synced: Arc<Mutex<i32>>) {
     while let Ok(n) = reader.read_i32().await {
         *synced.lock().await = n;
     }
 }
 
-pub async fn handle_client(
+async fn handle_client(
     mut reader: OwnedReadHalf,
     writers: Arc<Mutex<Vec<OwnedWriteHalf>>>,
     synced: Arc<Mutex<i32>>,
@@ -85,7 +85,7 @@ pub async fn handle_client(
     }
 }
 
-pub async fn run_server() -> io::Result<i32> {
+async fn run_server() -> io::Result<i32> {
     let listener = TcpListener::bind(SOCKET_ADDRESS).await?;
     let writers = Arc::new(Mutex::new(vec![]));
     let synced = Arc::new(Mutex::new(0));
