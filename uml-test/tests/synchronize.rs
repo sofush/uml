@@ -68,7 +68,7 @@ async fn read_changes(mut reader: OwnedReadHalf, synced: Arc<Mutex<i32>>) {
 
 async fn handle_client(
     mut reader: OwnedReadHalf,
-    writers: Arc<Mutex<Vec<OwnedWriteHalf>>>,
+    client_pool: Arc<Mutex<Vec<OwnedWriteHalf>>>,
     synced: Arc<Mutex<i32>>,
 ) {
     for _ in 0..NUM_ITERATIONS {
@@ -78,9 +78,9 @@ async fn handle_client(
 
         *synced.lock().await = new_value;
 
-        for writer in writers.lock().await.iter_mut() {
-            let _ = writer.write_i32(new_value).await;
-            let _ = writer.flush().await;
+        for client in client_pool.lock().await.iter_mut() {
+            let _ = client.write_i32(new_value).await;
+            let _ = client.flush().await;
         }
     }
 }
