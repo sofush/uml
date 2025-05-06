@@ -114,7 +114,7 @@ async fn synchronize() -> anyhow::Result<()> {
         .collect::<Vec<_>>();
 
     let num = run_server().await?;
-    eprintln!("{num}");
+    eprintln!("Serverens resultat: {num}");
 
     future::join_all(client_handles)
         .await
