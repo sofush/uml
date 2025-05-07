@@ -22,12 +22,12 @@ impl State {
         log::debug!("Handling event: {event}...");
 
         match event {
-            Event::Click { x, y } => {
+            Event::MouseDown { x, y } => {
                 let rect = Rectangle::new(x, y, 10, 10, BLACK);
                 self.document.elements().push(rect.into());
             }
             Event::Resize => self.canvas.update_size(),
-            Event::MouseMove { x, y } => (),
+            _ => (),
         };
 
         self.document.draw(&self.canvas);
