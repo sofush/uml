@@ -3199,6 +3199,7 @@ dependencies = [
  "futures",
  "gloo",
  "log",
+ "once_cell",
  "serde",
  "serde_json",
  "uml-common",
