@@ -9,7 +9,7 @@ pub enum Element {
 impl Drawable for Element {
     fn draw(&self, canvas: &impl Canvas) {
         match self {
-            Element::Rectangle(rectangle) => canvas.draw_rectangle(*rectangle),
+            Element::Rectangle(rectangle) => rectangle.draw(canvas),
         }
     }
 }

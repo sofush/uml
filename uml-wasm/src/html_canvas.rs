@@ -1,6 +1,7 @@
 use uml_common::{draw_context::Canvas, elements::Rectangle};
 use wasm_bindgen::JsCast;
 
+#[derive(Clone)]
 pub struct HtmlCanvas {
     element: web_sys::HtmlCanvasElement,
     context: web_sys::CanvasRenderingContext2d,
@@ -24,14 +25,23 @@ impl HtmlCanvas {
 
         Self { element, context }
     }
+
+    pub fn update_size(&self) {
+        let new_height = self.element.offset_height();
+        let new_width = self.element.offset_width();
+        self.element.set_height(new_height as u32);
+        self.element.set_width(new_width as u32);
+    }
 }
 
 impl Canvas for HtmlCanvas {
     fn draw_rectangle(&self, rect: Rectangle) {
-        self.context.set_fill_style_str("rgb(200 0 0)");
-        self.context.fill_rect(10.0, 10.0, 50.0, 50.0);
-
-        self.context.set_fill_style_str("rgb(0 0 200 / 50%)");
-        self.context.fill_rect(30.0, 30.0, 50.0, 50.0);
+        self.context.set_fill_style_str(&rect.color().to_string());
+        self.context.fill_rect(
+            rect.x() as f64,
+            rect.y() as f64,
+            rect.width() as f64,
+            rect.height() as f64,
+        );
     }
 }
