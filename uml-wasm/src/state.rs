@@ -51,7 +51,7 @@ impl State {
                 let delta_y = y - self.mouse_pos.1;
 
                 if self.translate_camera {
-                    self.camera.translate(delta_x as f64, delta_y as f64);
+                    self.camera.translate(-delta_x as f64, -delta_y as f64);
                     log::debug!("{:?}", self.camera);
                 }
 
