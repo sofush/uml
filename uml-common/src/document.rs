@@ -20,7 +20,8 @@ impl Document {
 impl Drawable for Document {
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
         let clear_rect: Element =
-            Rectangle::new(0, 0, u32::MAX, u32::MAX, WHITE).into();
+            Rectangle::new(i32::MIN, i32::MIN, u32::MAX, u32::MAX, WHITE)
+                .into();
         clear_rect.draw(canvas, camera);
 
         for drawable in &self.drawables {

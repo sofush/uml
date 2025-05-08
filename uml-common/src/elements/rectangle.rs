@@ -3,15 +3,15 @@ use crate::{camera::Camera, canvas::Canvas, color::Color, drawable::Drawable};
 
 #[derive(Clone, Copy)]
 pub struct Rectangle {
-    x: u32,
-    y: u32,
+    x: i32,
+    y: i32,
     width: u32,
     height: u32,
     color: Color,
 }
 
 impl Rectangle {
-    pub fn new(x: u32, y: u32, width: u32, height: u32, color: Color) -> Self {
+    pub fn new(x: i32, y: i32, width: u32, height: u32, color: Color) -> Self {
         Self {
             x,
             y,
@@ -21,11 +21,11 @@ impl Rectangle {
         }
     }
 
-    pub fn x(&self) -> u32 {
+    pub fn x(&self) -> i32 {
         self.x
     }
 
-    pub fn y(&self) -> u32 {
+    pub fn y(&self) -> i32 {
         self.y
     }
 
