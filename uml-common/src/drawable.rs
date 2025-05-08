@@ -1,4 +1,4 @@
-use crate::draw_context::Canvas;
+use crate::canvas::Canvas;
 
 pub trait Drawable {
     #[allow(unused_variables)]

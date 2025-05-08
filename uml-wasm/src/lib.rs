@@ -2,12 +2,16 @@ use event::Event;
 use gloo::{events::EventListener, utils::window};
 use html_canvas::HtmlCanvas;
 use log::Level;
+use mouse_button::MouseButton;
 use state::{SHARED_STATE, State};
 use uml_common::document::Document;
 use wasm_bindgen::prelude::*;
 
+mod camera;
+mod cursor;
 mod event;
 mod html_canvas;
+mod mouse_button;
 mod state;
 
 fn on_resize(callback: impl Fn(Event) -> () + 'static) {
@@ -32,7 +36,10 @@ fn on_mouse_down(callback: impl Fn(Event) -> () + 'static) {
         let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
         let x = event.client_x() as u32;
         let y = event.client_y() as u32;
-        let event = Event::MouseDown { x, y };
+        let Ok(button) = MouseButton::try_from(event.button()) else {
+            return;
+        };
+        let event = Event::MouseDown { button, x, y };
         callback(event);
     })
     .forget();
@@ -43,7 +50,10 @@ fn on_mouse_up(callback: impl Fn(Event) -> () + 'static) {
         let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
         let x = event.client_x() as u32;
         let y = event.client_y() as u32;
-        let event = Event::MouseUp { x, y };
+        let Ok(button) = MouseButton::try_from(event.button()) else {
+            return;
+        };
+        let event = Event::MouseUp { x, y, button };
         callback(event);
     })
     .forget();

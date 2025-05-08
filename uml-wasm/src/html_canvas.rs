@@ -1,4 +1,4 @@
-use uml_common::{draw_context::Canvas, elements::Rectangle};
+use uml_common::{canvas::Canvas, elements::Rectangle};
 use wasm_bindgen::JsCast;
 
 #[derive(Clone)]

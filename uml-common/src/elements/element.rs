@@ -1,5 +1,5 @@
 use super::rectangle::Rectangle;
-use crate::{draw_context::Canvas, drawable::Drawable};
+use crate::{canvas::Canvas, drawable::Drawable};
 
 #[derive(Clone)]
 pub enum Element {
