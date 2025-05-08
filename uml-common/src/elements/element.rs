@@ -1,5 +1,5 @@
 use super::rectangle::Rectangle;
-use crate::{canvas::Canvas, drawable::Drawable};
+use crate::{camera::Camera, canvas::Canvas, drawable::Drawable};
 
 #[derive(Clone)]
 pub enum Element {
@@ -7,9 +7,9 @@ pub enum Element {
 }
 
 impl Drawable for Element {
-    fn draw(&self, canvas: &impl Canvas) {
+    fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
         match self {
-            Element::Rectangle(rectangle) => rectangle.draw(canvas),
+            Element::Rectangle(rectangle) => rectangle.draw(canvas, camera),
         }
     }
 }

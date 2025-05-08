@@ -1,5 +1,5 @@
 use super::Element;
-use crate::{canvas::Canvas, color::Color, drawable::Drawable};
+use crate::{camera::Camera, canvas::Canvas, color::Color, drawable::Drawable};
 
 #[derive(Clone, Copy)]
 pub struct Rectangle {
@@ -49,7 +49,7 @@ impl From<Rectangle> for Element {
 }
 
 impl Drawable for Rectangle {
-    fn draw(&self, canvas: &impl Canvas) {
-        canvas.draw_rectangle(*self);
+    fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
+        canvas.draw_rectangle(*self, camera);
     }
 }

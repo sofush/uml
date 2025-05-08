@@ -1,4 +1,10 @@
-use crate::{canvas::Canvas, drawable::Drawable, elements::Element};
+use crate::{
+    camera::Camera,
+    canvas::Canvas,
+    color::WHITE,
+    drawable::Drawable,
+    elements::{Element, Rectangle},
+};
 
 #[derive(Clone, Default)]
 pub struct Document {
@@ -12,9 +18,13 @@ impl Document {
 }
 
 impl Drawable for Document {
-    fn draw(&self, canvas: &impl Canvas) {
+    fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
+        let clear_rect: Element =
+            Rectangle::new(0, 0, u32::MAX, u32::MAX, WHITE).into();
+        clear_rect.draw(canvas, camera);
+
         for drawable in &self.drawables {
-            drawable.draw(canvas);
+            drawable.draw(canvas, camera);
         }
     }
 }
