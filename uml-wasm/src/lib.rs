@@ -96,6 +96,8 @@ fn run() -> Result<(), JsValue> {
         })
     };
 
+    event_handler(Event::Redraw);
+
     on_resize(event_handler);
     on_mouse_down(event_handler);
     on_mouse_up(event_handler);
