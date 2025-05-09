@@ -4,7 +4,6 @@ use uml_common::{
     camera::Camera,
     color::BLACK,
     document::Document,
-    drawable::Drawable,
     elements::{Label, TextProperties},
 };
 
@@ -83,7 +82,7 @@ impl State {
                 let y = y + self.camera.y() as i32;
                 let props = TextProperties::new(50.0, "Arial");
                 let label = Label::new(x, y, "hello", props, BLACK);
-                self.document.elements().push(label.into());
+                self.document.elements_mut().push(label.into());
             }
         }
 
