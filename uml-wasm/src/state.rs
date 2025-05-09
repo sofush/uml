@@ -5,7 +5,7 @@ use uml_common::{
     color::BLACK,
     document::Document,
     drawable::Drawable,
-    elements::{Label, Rectangle, TextProperties},
+    elements::{Label, TextProperties},
 };
 
 thread_local! {
@@ -40,14 +40,9 @@ impl State {
     pub fn handle_event(&mut self, event: Event) {
         log::trace!("Handling event: {event}...");
 
-        match event {
-            Event::MouseDown { button, x, y } => {
+        match event.clone() {
+            Event::MouseDown { button, .. } => {
                 self.mouse_buttons.insert(button);
-                let x = x + self.camera.x() as i32;
-                let y = y + self.camera.y() as i32;
-                let props = TextProperties::new(50.0, "Arial");
-                let label = Label::new(x, y, "hello", props, BLACK);
-                self.document.elements().push(label.into());
             }
             Event::MouseUp { button, .. } => {
                 self.mouse_buttons.remove(&button);
@@ -76,6 +71,16 @@ impl State {
             let button = self.mouse_buttons.contains(&MouseButton::Left);
             let key = self.keys_pressed.contains(TRANSLATE_KEY);
             self.translate_camera = button && key;
+        }
+
+        if let Event::MouseDown { x, y, .. } = event {
+            if !self.translate_camera {
+                let x = x + self.camera.x() as i32;
+                let y = y + self.camera.y() as i32;
+                let props = TextProperties::new(50.0, "Arial");
+                let label = Label::new(x, y, "hello", props, BLACK);
+                self.document.elements().push(label.into());
+            }
         }
 
         self.document.draw(&self.canvas, &self.camera);
