@@ -1,15 +1,15 @@
-use std::u8;
+use std::fmt::Display;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Color {
     Rgb { red: u8, green: u8, blue: u8 },
 }
 
-impl ToString for Color {
-    fn to_string(&self) -> String {
+impl Display for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Color::Rgb { red, green, blue } => {
-                format!("rgb({red} {green} {blue})")
+                f.write_fmt(format_args!("RGB({red} {green} {blue})"))
             }
         }
     }

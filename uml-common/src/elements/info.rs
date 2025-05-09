@@ -1,9 +1,4 @@
-use crate::{
-    camera::{self, Camera},
-    canvas::Canvas,
-    color::BLACK,
-    drawable::Drawable,
-};
+use crate::{camera::Camera, canvas::Canvas, color::BLACK, drawable::Drawable};
 
 use super::{Rectangle, TextProperties};
 

@@ -12,7 +12,7 @@ thread_local! {
     pub static SHARED_STATE: RefCell<Option<State>> = RefCell::new(None);
 }
 
-const TRANSLATE_KEY: &'static str = " ";
+const TRANSLATE_KEY: &str = " ";
 
 pub struct State {
     document: Document,
