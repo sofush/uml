@@ -9,7 +9,7 @@ use uml_common::{
 };
 
 thread_local! {
-    pub static SHARED_STATE: RefCell<Option<State>> = RefCell::new(None);
+    pub static SHARED_STATE: RefCell<Option<State>> = const { RefCell::new(None) };
 }
 
 const TRANSLATE_KEY: &str = " ";
