@@ -1,5 +1,10 @@
-use super::Element;
-use crate::{camera::Camera, canvas::Canvas, color::Color, drawable::Drawable};
+use crate::{
+    camera::Camera,
+    canvas::Canvas,
+    color::Color,
+    drawable::Drawable,
+    interaction::{Interactable, InteractionState},
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Rectangle {
@@ -8,6 +13,7 @@ pub struct Rectangle {
     width: u32,
     height: u32,
     color: Color,
+    interaction_state: InteractionState,
 }
 
 impl Rectangle {
@@ -18,6 +24,7 @@ impl Rectangle {
             width,
             height,
             color,
+            interaction_state: InteractionState::default(),
         }
     }
 
@@ -42,14 +49,20 @@ impl Rectangle {
     }
 }
 
-impl From<Rectangle> for Element {
-    fn from(value: Rectangle) -> Self {
-        Element::Rectangle(value)
-    }
-}
-
 impl Drawable for Rectangle {
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
         canvas.draw_rectangle(*self, camera);
+    }
+}
+
+impl Interactable for Rectangle {
+    fn interaction_state(&self) -> InteractionState {
+        self.interaction_state
+    }
+
+    fn interaction_state_mut(
+        &mut self,
+    ) -> &mut crate::interaction::InteractionState {
+        &mut self.interaction_state
     }
 }

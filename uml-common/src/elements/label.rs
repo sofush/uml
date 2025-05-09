@@ -1,6 +1,12 @@
-use crate::{camera::Camera, canvas::Canvas, color::Color, drawable::Drawable};
+use crate::{
+    camera::Camera,
+    canvas::Canvas,
+    color::Color,
+    drawable::Drawable,
+    interaction::{Interactable, InteractionState},
+};
 
-use super::{Element, TextProperties};
+use super::TextProperties;
 
 #[derive(Debug, Clone)]
 pub struct Label {
@@ -9,6 +15,7 @@ pub struct Label {
     text: String,
     properties: TextProperties,
     color: Color,
+    interaction_state: InteractionState,
 }
 
 impl Label {
@@ -25,6 +32,7 @@ impl Label {
             text: text.into(),
             properties: props,
             color,
+            interaction_state: InteractionState::default(),
         }
     }
 
@@ -49,14 +57,20 @@ impl Label {
     }
 }
 
-impl From<Label> for Element {
-    fn from(value: Label) -> Self {
-        Element::Label(value)
-    }
-}
-
 impl Drawable for Label {
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
         canvas.draw_text(self, camera);
+    }
+}
+
+impl Interactable for Label {
+    fn interaction_state(&self) -> InteractionState {
+        self.interaction_state
+    }
+
+    fn interaction_state_mut(
+        &mut self,
+    ) -> &mut crate::interaction::InteractionState {
+        &mut self.interaction_state
     }
 }
