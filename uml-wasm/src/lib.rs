@@ -26,7 +26,7 @@ fn on_resize(callback: impl Fn(Event) + 'static) {
 }
 
 fn on_mouse_move(callback: impl Fn(Event) + 'static) {
-    add_event_listener("resize", move |e| {
+    add_event_listener("mousemove", move |e| {
         let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
         let x = event.client_x();
         let y = event.client_y();
