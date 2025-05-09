@@ -12,25 +12,30 @@ mod html_canvas;
 mod mouse_button;
 mod state;
 
-fn on_resize(callback: impl Fn(Event) -> () + 'static) {
-    EventListener::new(&window(), "resize", move |_| {
-        callback(Event::Resize);
-    })
-    .forget();
+fn add_event_listener(
+    event: &'static str,
+    callback: impl FnMut(&web_sys::Event) + 'static,
+) {
+    EventListener::new(&window(), event, callback).forget();
 }
 
-fn on_mouse_move(callback: impl Fn(Event) -> () + 'static) {
-    EventListener::new(&window(), "mousemove", move |e| {
+fn on_resize(callback: impl Fn(Event) + 'static) {
+    add_event_listener("resize", move |_| {
+        callback(Event::Resize);
+    })
+}
+
+fn on_mouse_move(callback: impl Fn(Event) + 'static) {
+    add_event_listener("resize", move |e| {
         let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
         let x = event.client_x();
         let y = event.client_y();
         callback(Event::MouseMove { x, y });
     })
-    .forget();
 }
 
-fn on_mouse_down(callback: impl Fn(Event) -> () + 'static) {
-    EventListener::new(&window(), "mousedown", move |e| {
+fn on_mouse_down(callback: impl Fn(Event) + 'static) {
+    add_event_listener("mousedown", move |e| {
         let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
         let x = event.client_x();
         let y = event.client_y();
@@ -40,11 +45,10 @@ fn on_mouse_down(callback: impl Fn(Event) -> () + 'static) {
         let event = Event::MouseDown { button, x, y };
         callback(event);
     })
-    .forget();
 }
 
-fn on_mouse_up(callback: impl Fn(Event) -> () + 'static) {
-    EventListener::new(&window(), "mouseup", move |e| {
+fn on_mouse_up(callback: impl Fn(Event) + 'static) {
+    add_event_listener("mouseup", move |e| {
         let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
         let x = event.client_x();
         let y = event.client_y();
@@ -54,25 +58,22 @@ fn on_mouse_up(callback: impl Fn(Event) -> () + 'static) {
         let event = Event::MouseUp { x, y, button };
         callback(event);
     })
-    .forget();
 }
 
-fn on_key_down(callback: impl Fn(Event) -> () + 'static) {
-    EventListener::new(&window(), "keydown", move |e| {
+fn on_key_down(callback: impl Fn(Event) + 'static) {
+    add_event_listener("keydown", move |e| {
         let event = e.dyn_ref::<web_sys::KeyboardEvent>().unwrap_throw();
         let event = Event::KeyDown { key: event.key() };
         callback(event);
     })
-    .forget();
 }
 
-fn on_key_up(callback: impl Fn(Event) -> () + 'static) {
-    EventListener::new(&window(), "keyup", move |e| {
+fn on_key_up(callback: impl Fn(Event) + 'static) {
+    add_event_listener("keyup", move |e| {
         let event = e.dyn_ref::<web_sys::KeyboardEvent>().unwrap_throw();
         let event = Event::KeyUp { key: event.key() };
         callback(event);
     })
-    .forget();
 }
 
 #[wasm_bindgen(start)]
