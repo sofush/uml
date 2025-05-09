@@ -1,8 +1,11 @@
 use crate::{event::Event, html_canvas::HtmlCanvas, mouse_button::MouseButton};
 use std::{cell::RefCell, collections::HashSet, thread_local};
 use uml_common::{
-    camera::Camera, color::BLACK, document::Document, drawable::Drawable,
-    elements::Rectangle,
+    camera::Camera,
+    color::BLACK,
+    document::Document,
+    drawable::Drawable,
+    elements::{Label, Rectangle, TextProperties},
 };
 
 thread_local! {
@@ -42,8 +45,9 @@ impl State {
                 self.mouse_buttons.insert(button);
                 let x = x + self.camera.x() as i32;
                 let y = y + self.camera.y() as i32;
-                let rect = Rectangle::new(x - 5, y - 5, 10, 10, BLACK);
-                self.document.elements().push(rect.into());
+                let props = TextProperties::new(50.0, "Arial");
+                let label = Label::new(x, y, "hello", props, BLACK);
+                self.document.elements().push(label.into());
             }
             Event::MouseUp { button, .. } => {
                 self.mouse_buttons.remove(&button);

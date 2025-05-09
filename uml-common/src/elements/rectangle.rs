@@ -1,7 +1,7 @@
 use super::Element;
 use crate::{camera::Camera, canvas::Canvas, color::Color, drawable::Drawable};
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Rectangle {
     x: i32,
     y: i32,
