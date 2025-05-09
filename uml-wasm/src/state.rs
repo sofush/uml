@@ -53,7 +53,10 @@ impl State {
 
                 if self.translate_camera {
                     self.camera.translate(-delta_x as f64, -delta_y as f64);
-                    log::debug!("{:?}", self.camera);
+                    log::trace!(
+                        "Camera state after translate: {:?}",
+                        self.camera
+                    );
                 }
 
                 self.mouse_pos = (x, y);
