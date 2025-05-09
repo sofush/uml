@@ -15,7 +15,7 @@ pub enum Event {
 impl Display for Event {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Event::Resize => f.write_fmt(format_args!("Resize")),
+            Event::Resize => f.write_str("Resize"),
             Event::MouseDown { button, x, y } => {
                 f.write_fmt(format_args!("MouseDown({button:?}, {x}, {y})"))
             }
