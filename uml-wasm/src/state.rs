@@ -1,7 +1,11 @@
 use crate::{event::Event, html_canvas::HtmlCanvas, mouse_button::MouseButton};
 use std::{cell::RefCell, collections::HashSet, thread_local};
 use uml_common::{
-    camera::Camera, color::BLACK, document::Document, elements::Rectangle,
+    camera::Camera,
+    color::BLACK,
+    document::Document,
+    drawable::Drawable,
+    elements::{Info, Rectangle, TextProperties},
 };
 
 thread_local! {
@@ -80,7 +84,7 @@ impl State {
                 // let props = TextProperties::new(50.0, "Arial");
                 // let label = Label::new(x, y, "hello", props, BLACK);
                 // self.document.elements_mut().push(label.into());
-                let rect = Rectangle::new(x, y, 10, 10, BLACK);
+                let rect = Rectangle::new(x, y, 100, 100, BLACK);
                 self.document.elements_mut().push(rect.into());
             }
         }
@@ -91,5 +95,12 @@ impl State {
         );
 
         self.document.draw(&self.canvas, &self.camera, cursor_pos);
+
+        if self.translate_camera {
+            let props = TextProperties::new(20.0, "Arial");
+            let text = format!("{}x {}y", self.camera.x(), self.camera.y());
+            let info = Info::new(text, props);
+            info.draw_fixed(&self.canvas);
+        }
     }
 }
