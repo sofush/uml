@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use super::{Label, rectangle::Rectangle};
 use crate::{
     camera::Camera,
@@ -6,7 +8,7 @@ use crate::{
     interaction::{Interactable, InteractionState},
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Element {
     Rectangle(Rectangle),
     Label(Label),
