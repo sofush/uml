@@ -8,7 +8,7 @@ use crate::{
 
 use super::TextProperties;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Label {
     x: i32,
     y: i32,
