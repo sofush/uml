@@ -12,6 +12,8 @@ use crate::{
 pub struct Document {
     elements: Vec<Element>,
     color: Color,
+    #[serde(skip)]
+    synchronized: bool,
 }
 
 impl Document {
@@ -20,7 +22,16 @@ impl Document {
     }
 
     pub fn add_element(&mut self, el: impl Into<Element>) {
+        self.synchronized = false;
         self.elements.push(el.into());
+    }
+
+    pub fn synchronized(&self) -> bool {
+        self.synchronized
+    }
+
+    pub fn assume_sync(&mut self) {
+        self.synchronized = true;
     }
 
     pub fn draw(
@@ -81,6 +92,7 @@ impl Default for Document {
                 blue: 240,
             },
             elements: Default::default(),
+            synchronized: true,
         }
     }
 }

@@ -44,7 +44,7 @@ impl WsClient {
         })
     }
 
-    pub fn send(&mut self, items: Vec<Message>) -> Result<(), WebSocketError> {
+    pub fn send(&mut self, items: Vec<Message>) {
         let writer = self.writer.clone();
 
         spawn_local(async move {
@@ -66,7 +66,5 @@ impl WsClient {
                 state::handle_event(event);
             };
         });
-
-        Ok(())
     }
 }

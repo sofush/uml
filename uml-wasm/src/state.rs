@@ -4,7 +4,7 @@ use crate::{
     mouse_button::MouseButton,
     wsclient::{WsClient, WsEvent},
 };
-use gloo::timers::callback::Timeout;
+use gloo::{net::websocket::Message, timers::callback::Timeout};
 use std::{cell::RefCell, collections::HashSet, thread_local};
 use uml_common::{
     camera::Camera,
@@ -105,6 +105,14 @@ impl State {
             Event::WebSocket(ev) => match ev {
                 WsEvent::Received(msg) => {
                     log::trace!("Received WebSocket message: {msg:?}");
+
+                    if let Message::Text(text) = msg {
+                        if let Ok(document) =
+                            serde_json::from_str::<Document>(&text)
+                        {
+                            self.document = document;
+                        }
+                    }
                 }
                 WsEvent::SendError(e) | WsEvent::ReceiveError(e) => {
                     log::error!("Websocket error: {e:?}");
@@ -142,5 +150,27 @@ impl State {
             let info = Info::new(text, props);
             info.draw_fixed(&self.canvas);
         }
+
+        self.sync_document();
+    }
+
+    pub fn sync_document(&mut self) {
+        if self.document.synchronized() {
+            return;
+        }
+
+        let Some(ws) = &mut self.ws else {
+            log::error!("Could not sync document because ws is None.");
+            return;
+        };
+
+        let Ok(document_json) = serde_json::to_string(&self.document) else {
+            log::error!("Serialization of document failed.");
+            return;
+        };
+
+        log::trace!("Attempting to synchronize document.");
+        ws.send(vec![Message::Text(document_json)]);
+        self.document.assume_sync();
     }
 }
