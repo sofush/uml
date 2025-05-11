@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::mouse_button::MouseButton;
+use crate::{mouse_button::MouseButton, wsclient::WsEvent};
 
 #[derive(Clone)]
 pub enum Event {
@@ -10,7 +10,8 @@ pub enum Event {
     MouseMove { x: i32, y: i32 },
     KeyDown { key: String },
     KeyUp { key: String },
-    Redraw,
+    Initialize,
+    WebSocket(WsEvent),
 }
 
 impl Display for Event {
@@ -32,7 +33,10 @@ impl Display for Event {
             Event::KeyUp { key } => {
                 f.write_fmt(format_args!("KeyUp(\"{key}\")"))
             }
-            Event::Redraw => f.write_str("Redraw"),
+            Event::Initialize => f.write_str("Initialize"),
+            Event::WebSocket(msg) => {
+                f.write_fmt(format_args!("WsMessage({msg:?})"))
+            }
         }
     }
 }
