@@ -19,8 +19,8 @@ impl Document {
         &self.elements
     }
 
-    pub fn elements_mut(&mut self) -> &mut Vec<Element> {
-        &mut self.elements
+    pub fn add_element(&mut self, el: impl Into<Element>) {
+        self.elements.push(el.into());
     }
 
     pub fn draw(

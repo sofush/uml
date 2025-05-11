@@ -125,7 +125,7 @@ impl State {
                 let x = x + self.camera.x() as i32;
                 let y = y + self.camera.y() as i32;
                 let rect = Rectangle::new(x, y, 100, 100, BLACK);
-                self.document.elements_mut().push(rect.into());
+                self.document.add_element(rect);
             }
         }
 
