@@ -111,6 +111,7 @@ impl State {
                             serde_json::from_str::<Document>(&text)
                         {
                             self.document = document;
+                            self.document.assume_sync();
                         }
                     }
                 }
@@ -158,6 +159,8 @@ impl State {
         if self.document.synchronized() {
             return;
         }
+
+        log::debug!("Synchronizing document with server.");
 
         let Some(ws) = &mut self.ws else {
             log::error!("Could not sync document because ws is None.");
