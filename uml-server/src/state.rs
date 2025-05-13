@@ -45,11 +45,13 @@ impl State {
             handlers.push(ClientHandler::new(session, rx));
 
             loop {
+                handlers.retain(|h| !h.is_closed());
+
                 let Some((sender_id, json, _doc)) =
                     wait_for_message(handlers).await
                 else {
-                    log::warn!("wait_for_message returned None, breaking.");
-                    break;
+                    log::warn!("wait_for_message returned None");
+                    continue;
                 };
 
                 for handler in handlers.iter_mut() {
