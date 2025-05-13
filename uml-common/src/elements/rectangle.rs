@@ -15,18 +15,27 @@ pub struct Rectangle {
     width: u32,
     height: u32,
     color: Color,
+    radius: Option<u32>,
     #[serde(skip)]
     interaction_state: InteractionState,
 }
 
 impl Rectangle {
-    pub fn new(x: i32, y: i32, width: u32, height: u32, color: Color) -> Self {
+    pub fn new(
+        x: i32,
+        y: i32,
+        width: u32,
+        height: u32,
+        color: Color,
+        radius: Option<u32>,
+    ) -> Self {
         Self {
             x,
             y,
             width,
             height,
             color,
+            radius,
             interaction_state: InteractionState::default(),
         }
     }
@@ -49,6 +58,10 @@ impl Rectangle {
 
     pub fn color(&self) -> Color {
         self.color
+    }
+
+    pub fn radius(&self) -> Option<u32> {
+        self.radius
     }
 }
 

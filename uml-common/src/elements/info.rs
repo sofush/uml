@@ -38,6 +38,7 @@ impl Drawable for Info {
                 green: 255,
                 blue: 0,
             },
+            None,
         );
         bg.draw_fixed(canvas);
 

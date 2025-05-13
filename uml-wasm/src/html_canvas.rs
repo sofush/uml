@@ -43,12 +43,34 @@ impl HtmlCanvas {
 impl Canvas for HtmlCanvas {
     fn draw_rectangle(&self, rect: Rectangle, camera: &Camera) {
         self.context.set_fill_style_str(&rect.color().to_string());
-        self.context.fill_rect(
-            rect.x() as f64 - camera.x(),
-            rect.y() as f64 - camera.y(),
-            rect.width() as f64,
-            rect.height() as f64,
-        );
+
+        if let Some(radius) = rect.radius() {
+            self.context.begin_path();
+
+            if self
+                .context
+                .round_rect_with_f64(
+                    rect.x() as f64 - camera.x(),
+                    rect.y() as f64 - camera.y(),
+                    rect.width() as f64,
+                    rect.height() as f64,
+                    radius as f64,
+                )
+                .is_err()
+            {
+                log::error!("Could not draw rounded rect.");
+                return;
+            };
+
+            self.context.fill();
+        } else {
+            self.context.fill_rect(
+                rect.x() as f64 - camera.x(),
+                rect.y() as f64 - camera.y(),
+                rect.width() as f64,
+                rect.height() as f64,
+            );
+        }
     }
 
     fn draw_text(&self, label: &Label, camera: &Camera) {

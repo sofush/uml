@@ -133,7 +133,7 @@ impl State {
             if !self.translate_camera {
                 let x = x + self.camera.x() as i32;
                 let y = y + self.camera.y() as i32;
-                let rect = Rectangle::new(x, y, 100, 100, BLACK);
+                let rect = Rectangle::new(x, y, 100, 100, BLACK, Some(3));
                 self.document.add_element(rect);
             }
         }

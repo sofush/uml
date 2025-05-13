@@ -40,9 +40,15 @@ impl Document {
         camera: &Camera,
         cursor_pos: (i32, i32),
     ) {
-        let clear_rect: Element =
-            Rectangle::new(i32::MIN, i32::MIN, u32::MAX, u32::MAX, self.color)
-                .into();
+        let clear_rect: Element = Rectangle::new(
+            i32::MIN,
+            i32::MIN,
+            u32::MAX,
+            u32::MAX,
+            self.color,
+            None,
+        )
+        .into();
         clear_rect.draw(canvas, camera);
 
         const SIZE: u32 = 2;
@@ -60,7 +66,7 @@ impl Document {
                 let x = (row as f64 * SPACE) + offx;
                 let y = (col as f64 * SPACE) + offy;
                 let rect =
-                    Rectangle::new(x as _, y as _, SIZE, SIZE, dot_color);
+                    Rectangle::new(x as _, y as _, SIZE, SIZE, dot_color, None);
                 rect.draw_fixed(canvas);
             }
         }
@@ -74,7 +80,7 @@ impl Document {
                 };
                 let x = 50.0;
                 let y = 50.0;
-                let rect = Rectangle::new(x as _, y as _, 50, 50, color);
+                let rect = Rectangle::new(x as _, y as _, 50, 50, color, None);
                 rect.draw_fixed(canvas);
             }
 
