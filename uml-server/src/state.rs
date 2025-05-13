@@ -42,15 +42,27 @@ impl State {
         self.task.as_ref().map(|t| t.abort());
         self.task = Some(rt::spawn(async move {
             let handlers = &mut handlers.lock().await;
-            handlers.push(ClientHandler::new(session, rx));
+            let client = ClientHandler::new(session, rx);
+            let id = client.id();
+            handlers.push(client);
+
+            log::debug!("Add ClientHandler with ID {}", id);
 
             loop {
-                handlers.retain(|h| !h.is_closed());
+                handlers.retain(|handler| {
+                    let closed = handler.is_closed();
+
+                    if closed {
+                        log::debug!("Removing ClientHandler with ID {} as it has closed.", handler.id());
+                    }
+
+                    !closed
+                });
 
                 let Some((sender_id, json, _doc)) =
                     wait_for_message(handlers).await
                 else {
-                    log::warn!("wait_for_message returned None");
+                    log::debug!("A client has disconnected.");
                     continue;
                 };
 
