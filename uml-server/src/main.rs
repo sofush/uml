@@ -53,6 +53,11 @@ async fn main() -> std::io::Result<()> {
     let data = Data::new(Mutex::new(State::default()));
     let data_clone = data.clone();
 
+    let ip = match cfg!(debug_assertions) {
+        true => "127.0.0.1",
+        false => "0.0.0.0",
+    };
+
     HttpServer::new(move || {
         App::new()
             .app_data(data.clone())
@@ -64,7 +69,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::NormalizePath::trim())
             .wrap(middleware::Logger::default())
     })
-    .bind(("0.0.0.0", 8080))?
+    .bind((ip, 8080))?
     .run()
     .await?;
 
