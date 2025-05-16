@@ -1,35 +1,133 @@
-use std::sync::Arc;
-
-use actix_web::rt::{self, task};
+use actix_web::rt::{self};
 use actix_ws::{AggregatedMessage, Session};
-use futures_util::{
-    StreamExt,
-    lock::{Mutex, MutexGuard},
-    stream::FuturesUnordered,
+use futures_util::{StreamExt, stream::FuturesUnordered};
+use tokio::{
+    sync::mpsc::{Receiver, Sender},
+    task::JoinHandle,
 };
-use tokio::sync::mpsc::Receiver;
 use uml_common::document::Document;
 
 use crate::{client_handler::ClientHandler, id::Id};
 
-async fn wait_for_message(
-    handlers: &mut MutexGuard<'_, Vec<ClientHandler>>,
-) -> Option<(Id, String, Document)> {
-    let mut futures = FuturesUnordered::new();
+pub enum StateEvent {
+    ClientConnected(ClientHandler),
+    ClientDisconnected,
+    ClientReceived {
+        client_id: Id,
+        json: String,
+        document: Document,
+    },
+    StopSignal,
+}
+
+async fn read_message(handlers: &mut [ClientHandler]) -> StateEvent {
+    let mut readers = FuturesUnordered::new();
 
     for handler in handlers.iter_mut() {
         let fut = handler.read();
-        futures.push(fut);
+        readers.push(fut);
     }
 
-    futures.next().await.flatten()
+    let Some(msg) = readers.next().await else {
+        // If there are no client handlers, we to return a future that never resolves, as that is
+        // the expected behavior of the calling function.
+        return futures::future::pending::<_>().await;
+    };
+
+    match msg {
+        Some((client_id, json, document)) => StateEvent::ClientReceived {
+            client_id,
+            json,
+            document,
+        },
+        None => StateEvent::ClientDisconnected,
+    }
 }
 
-#[derive(Default)]
+async fn wait_for_event(
+    handlers: &mut [ClientHandler],
+    new_clients_rx: &mut Receiver<ClientHandler>,
+    stop_signal_rx: &mut Receiver<()>,
+) -> StateEvent {
+    tokio::select! {
+        read_event = read_message(handlers) => {
+            read_event
+        },
+        client_handler = new_clients_rx.recv() => {
+            let Some(handler) = client_handler else {
+                return StateEvent::StopSignal;
+            };
+
+            StateEvent::ClientConnected(handler)
+        },
+        _ = stop_signal_rx.recv() => {
+            StateEvent::StopSignal
+        }
+    }
+}
+
+async fn handle_event(
+    latest_document: &mut Document,
+    handlers: &mut Vec<ClientHandler>,
+    event: StateEvent,
+) {
+    match event {
+        StateEvent::ClientConnected(mut client_handler) => {
+            let Ok(json) = serde_json::to_string(&latest_document) else {
+                log::warn!(
+                    "Client with ID {} was not sent document, as it could not be deserialized.",
+                    client_handler.id(),
+                );
+                return;
+            };
+
+            let Ok(()) = client_handler.send(json).await else {
+                log::warn!(
+                    "Attempted to add client with ID {}, but connection is closed.",
+                    client_handler.id(),
+                );
+                return;
+            };
+
+            log::debug!("Client with ID {} connected!", client_handler.id());
+            handlers.push(client_handler);
+        }
+        StateEvent::ClientDisconnected => {
+            handlers.retain(|handler| {
+                let closed = handler.is_closed();
+
+                if closed {
+                    log::debug!(
+                        "Removing ClientHandler with ID {} as it has closed.",
+                        handler.id()
+                    );
+                }
+
+                !closed
+            });
+        }
+        StateEvent::ClientReceived {
+            client_id,
+            json,
+            document,
+        } => {
+            log::debug!("Client with ID {client_id} received a message.");
+            *latest_document = document;
+
+            for handler in handlers {
+                if handler.id() != client_id {
+                    let _ = handler.send(json.clone()).await;
+                }
+            }
+        }
+        StateEvent::StopSignal => (),
+    }
+}
+
 pub struct State {
-    handlers: Arc<Mutex<Vec<ClientHandler>>>,
-    document: Arc<Mutex<Document>>,
-    task: Option<task::JoinHandle<()>>,
+    new_clients_tx: Sender<ClientHandler>,
+    stop_signal_tx: Sender<()>,
+    task: Option<JoinHandle<()>>,
 }
 
 impl State {
@@ -38,70 +136,63 @@ impl State {
         session: Session,
         rx: Receiver<AggregatedMessage>,
     ) {
-        let handlers = Arc::clone(&self.handlers);
-        let document = Arc::clone(&self.document);
-
-        self.task.as_ref().map(|t| t.abort());
-        self.task = Some(rt::spawn(async move {
-            let mut handlers = handlers.lock().await;
-            let mut document = document.lock().await;
-            let mut client = ClientHandler::new(session, rx);
-            let id = client.id();
-
-            let json = serde_json::to_string(&*document);
-
-            if let Ok(json) = json {
-                if client.send(json).await.is_ok() {
-                    handlers.push(client);
-                    log::debug!("Added ClientHandler with ID {}", id);
-                } else {
-                    log::warn!(
-                        "Attempted to add client with ID {}, but connection is closed.",
-                        id
-                    );
-                };
-            } else {
-                log::error!(
-                    "New client with ID {} was not sent the document as it couldn't be deserialized.",
-                    id
-                );
-            }
-
-            loop {
-                handlers.retain(|handler| {
-                    let closed = handler.is_closed();
-
-                    if closed {
-                        log::debug!("Removing ClientHandler with ID {} as it has closed.", handler.id());
-                    }
-
-                    !closed
-                });
-
-                let Some((sender_id, json, doc)) =
-                    wait_for_message(&mut handlers).await
-                else {
-                    log::debug!("A client has disconnected.");
-                    continue;
-                };
-
-                *document = doc;
-
-                for handler in handlers.iter_mut() {
-                    if handler.id() != sender_id {
-                        let _ = handler.send(json.clone()).await;
-                    }
-                }
-            }
-        }));
+        let client = ClientHandler::new(session, rx);
+        self.new_clients_tx
+            .send(client)
+            .await
+            .expect("receive half should always be open");
     }
 
-    pub async fn close_connections(&mut self) {
-        self.task = None;
-        let mut clients = self.handlers.lock().await;
+    pub async fn stop(&mut self) {
+        let Some(task) = self.task.take() else {
+            return;
+        };
 
-        for client in clients.drain(..) {
-            client.close().await;
+        let _ = self.stop_signal_tx.send(()).await;
+        let _ = task.await;
+    }
+}
+
+impl Default for State {
+    fn default() -> Self {
+        let (stop_signal_tx, mut stop_signal_rx) =
+            tokio::sync::mpsc::channel::<()>(1);
+
+        let (new_clients_tx, mut new_clients_rx) =
+            tokio::sync::mpsc::channel::<ClientHandler>(100);
+
+        let task = rt::spawn(async move {
+            let mut handlers: Vec<ClientHandler> = vec![];
+            let mut latest_document = Document::default();
+
+            loop {
+                let event = wait_for_event(
+                    &mut handlers,
+                    &mut new_clients_rx,
+                    &mut stop_signal_rx,
+                )
+                .await;
+
+                if matches!(event, StateEvent::StopSignal) {
+                    log::debug!(
+                        "Stop signal received, stopping client handlers."
+                    );
+
+                    for handler in handlers {
+                        handler.close().await;
+                    }
+
+                    break;
+                }
+
+                handle_event(&mut latest_document, &mut handlers, event).await;
+            }
+        });
+
+        Self {
+            new_clients_tx,
+            stop_signal_tx,
+            task: Some(task),
         }
     }
 }

@@ -52,7 +52,6 @@ async fn main() -> std::io::Result<()> {
 
     let data = Data::new(Mutex::new(State::default()));
     let data_clone = data.clone();
-
     let ip = match cfg!(debug_assertions) {
         true => "127.0.0.1",
         false => "0.0.0.0",
@@ -73,6 +72,6 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await?;
 
-    data_clone.get_ref().lock().await.close_connections().await;
+    data_clone.lock().await.stop().await;
     Ok(())
 }
