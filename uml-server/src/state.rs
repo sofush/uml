@@ -17,6 +17,10 @@ pub enum StateEvent {
 }
 
 async fn read_message(handlers: &mut [ClientHandler]) -> StateEvent {
+    if handlers.is_empty() {
+        return futures::future::pending::<StateEvent>().await;
+    }
+
     let mut readers = FuturesUnordered::new();
 
     for handler in handlers.iter_mut() {
@@ -25,9 +29,7 @@ async fn read_message(handlers: &mut [ClientHandler]) -> StateEvent {
     }
 
     let Some(msg) = readers.next().await else {
-        // If there are no client handlers, we to return a future that never resolves, as that is
-        // the expected behavior of the calling function.
-        return futures::future::pending::<_>().await;
+        unreachable!("guarded by if-statement");
     };
 
     match msg {
