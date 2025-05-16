@@ -1,4 +1,4 @@
-use std::{rc::Rc, sync::Arc};
+use std::rc::Rc;
 
 use futures::{SinkExt as _, StreamExt as _, lock::Mutex, stream::SplitSink};
 use gloo::{
@@ -17,7 +17,7 @@ pub enum WsEvent {
 }
 
 pub struct WsClient {
-    writer: Arc<Mutex<SplitSink<WebSocket, Message>>>,
+    writer: Rc<Mutex<SplitSink<WebSocket, Message>>>,
 }
 
 impl WsClient {
@@ -40,7 +40,7 @@ impl WsClient {
         });
 
         Ok(Self {
-            writer: Arc::new(Mutex::new(writer)),
+            writer: Rc::new(Mutex::new(writer)),
         })
     }
 
