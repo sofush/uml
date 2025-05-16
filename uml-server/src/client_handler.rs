@@ -4,6 +4,12 @@ use uml_common::document::Document;
 
 use crate::id::Id;
 
+pub struct WsMessage {
+    pub recipient: Id,
+    pub json: String,
+    pub document: Document,
+}
+
 pub struct ClientHandler {
     id: Id,
     session: actix_ws::Session,
@@ -26,9 +32,12 @@ impl ClientHandler {
         self.id
     }
 
-    pub async fn read(&mut self) -> Option<(Id, String, Document)> {
+    pub async fn read(&mut self) -> Option<WsMessage> {
         let msg = self.stream.recv().await?;
-        log::trace!("Received WebSocket message: {msg:?}");
+        log::trace!(
+            "Client with ID {} received a WebSocket message: {msg:?}",
+            self.id
+        );
 
         let Text(text) = msg else {
             return None;
@@ -36,7 +45,12 @@ impl ClientHandler {
 
         let json = text.to_string();
         let document = serde_json::from_str(&json).ok()?;
-        Some((self.id, json, document))
+
+        Some(WsMessage {
+            recipient: self.id,
+            json,
+            document,
+        })
     }
 
     pub async fn send(

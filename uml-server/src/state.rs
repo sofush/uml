@@ -7,16 +7,12 @@ use tokio::{
 };
 use uml_common::document::Document;
 
-use crate::{client_handler::ClientHandler, id::Id};
+use crate::client_handler::{ClientHandler, WsMessage};
 
 pub enum StateEvent {
     ClientConnected(ClientHandler),
     ClientDisconnected,
-    ClientReceived {
-        client_id: Id,
-        json: String,
-        document: Document,
-    },
+    ClientReceived(WsMessage),
     StopSignal,
 }
 
@@ -35,11 +31,7 @@ async fn read_message(handlers: &mut [ClientHandler]) -> StateEvent {
     };
 
     match msg {
-        Some((client_id, json, document)) => StateEvent::ClientReceived {
-            client_id,
-            json,
-            document,
-        },
+        Some(msg) => StateEvent::ClientReceived(msg),
         None => StateEvent::ClientDisconnected,
     }
 }
@@ -106,17 +98,13 @@ async fn handle_event(
                 !closed
             });
         }
-        StateEvent::ClientReceived {
-            client_id,
-            json,
-            document,
-        } => {
-            log::debug!("Client with ID {client_id} received a message.");
-            *latest_document = document;
+        StateEvent::ClientReceived(msg) => {
+            log::debug!("Client with ID {} received a message.", msg.recipient);
+            *latest_document = msg.document;
 
             for handler in handlers {
-                if handler.id() != client_id {
-                    let _ = handler.send(json.clone()).await;
+                if handler.id() != msg.recipient {
+                    let _ = handler.send(msg.json.clone()).await;
                 }
             }
         }
