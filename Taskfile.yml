@@ -16,7 +16,7 @@ tasks:
     env:
       RUST_LOG: '{{.RUST_LOG | default "actix_server=info,uml_server=debug"}}'
     cmds:
-      - watchexec -re rs,js -w Taskfile.yml -w uml-server/src -w uml-common/src -w uml-wasm/src go-task run
+      - watchexec --stop-signal=SIGINT -re rs,js -w Taskfile.yml -w uml-server/src -w uml-common/src -w uml-wasm/src go-task run
 
   build-docker:
     cmds:

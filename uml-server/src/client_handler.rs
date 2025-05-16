@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use actix_ws::AggregatedMessage::{self, *};
 use tokio::sync::mpsc::Receiver;
 use uml_common::document::Document;
@@ -61,11 +63,19 @@ impl ClientHandler {
     }
 
     pub async fn close(self) {
+        if self.is_closed() {
+            return;
+        }
+
         let close_reason = actix_ws::CloseReason {
             code: actix_ws::CloseCode::Restart,
             description: None,
         };
-        let _ = self.session.close(Some(close_reason)).await;
+
+        let _ = tokio::time::timeout(Duration::from_millis(1000), async {
+            let _ = self.session.close(Some(close_reason)).await;
+        })
+        .await;
     }
 
     pub fn is_closed(&self) -> bool {

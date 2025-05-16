@@ -166,10 +166,13 @@ impl Default for State {
                         "Stop signal received, stopping client handlers."
                     );
 
+                    let mut futures = FuturesUnordered::new();
+
                     for handler in handlers {
-                        handler.close().await;
+                        futures.push(handler.close());
                     }
 
+                    while (futures.next().await).is_some() {}
                     break;
                 }
 
