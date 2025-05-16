@@ -110,7 +110,18 @@ async fn handle_event(
                 }
             }
         }
-        StateEvent::StopSignal => (),
+        StateEvent::StopSignal => {
+            log::debug!("Stop signal received, closing connection to clients.");
+
+            let mut futures = FuturesUnordered::new();
+            let handlers = handlers.drain(..);
+
+            for handler in handlers {
+                futures.push(handler.close());
+            }
+
+            while (futures.next().await).is_some() {}
+        }
     }
 }
 
@@ -163,22 +174,12 @@ impl Default for State {
                 )
                 .await;
 
-                if matches!(event, StateEvent::StopSignal) {
-                    log::debug!(
-                        "Stop signal received, stopping client handlers."
-                    );
+                let stop = matches!(event, StateEvent::StopSignal);
+                handle_event(&mut latest_document, &mut handlers, event).await;
 
-                    let mut futures = FuturesUnordered::new();
-
-                    for handler in handlers {
-                        futures.push(handler.close());
-                    }
-
-                    while (futures.next().await).is_some() {}
+                if stop {
                     break;
                 }
-
-                handle_event(&mut latest_document, &mut handlers, event).await;
             }
         });
 
