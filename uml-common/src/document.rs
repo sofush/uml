@@ -35,11 +35,12 @@ impl Document {
         self.synchronized = true;
     }
 
-    pub fn move_cursor(&mut self, cursor_pos: (i32, i32)) {
+    pub fn update_cursor(&mut self, cursor_pos: (i32, i32), visible: bool) {
         for el in &mut self.elements {
-            match (el.is_hovered(), el.cursor_intersects(cursor_pos)) {
-                (true, false) => el.hover_leave(),
-                (false, true) => el.hover_enter(),
+            match (visible, el.is_hovered(), el.cursor_intersects(cursor_pos)) {
+                (true, true, false) => el.hover_leave(),
+                (true, false, true) => el.hover_enter(),
+                (false, true, _) => el.hover_leave(),
                 _ => (),
             }
         }

@@ -60,6 +60,24 @@ fn on_mouse_up(callback: impl Fn(Event) + 'static) {
     })
 }
 
+fn on_mouse_out(callback: impl Fn(Event) + 'static) {
+    add_event_listener("mouseout", move |e| {
+        let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
+        let x = event.client_x();
+        let y = event.client_y();
+        callback(Event::MouseOut { x, y });
+    })
+}
+
+fn on_mouse_enter(callback: impl Fn(Event) + 'static) {
+    add_event_listener("mouseenter", move |e| {
+        let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
+        let x = event.client_x();
+        let y = event.client_y();
+        callback(Event::MouseEnter { x, y });
+    })
+}
+
 fn on_key_down(callback: impl Fn(Event) + 'static) {
     add_event_listener("keydown", move |e| {
         let event = e.dyn_ref::<web_sys::KeyboardEvent>().unwrap_throw();
@@ -91,6 +109,8 @@ async fn run() -> Result<(), JsValue> {
     on_mouse_down(state::handle_event);
     on_mouse_up(state::handle_event);
     on_mouse_move(state::handle_event);
+    on_mouse_out(state::handle_event);
+    on_mouse_enter(state::handle_event);
     on_key_down(state::handle_event);
     on_key_up(state::handle_event);
     Ok(())

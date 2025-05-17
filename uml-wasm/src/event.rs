@@ -8,6 +8,8 @@ pub enum Event {
     MouseDown { button: MouseButton, x: i32, y: i32 },
     MouseUp { button: MouseButton, x: i32, y: i32 },
     MouseMove { x: i32, y: i32 },
+    MouseOut { x: i32, y: i32 },
+    MouseEnter { x: i32, y: i32 },
     KeyDown { key: String },
     KeyUp { key: String },
     Initialize,
@@ -26,6 +28,12 @@ impl Display for Event {
             }
             Event::MouseMove { x, y } => {
                 f.write_fmt(format_args!("MouseMove({x}, {y})"))
+            }
+            Event::MouseOut { x, y } => {
+                f.write_fmt(format_args!("MouseOut({x}, {y})"))
+            }
+            Event::MouseEnter { x, y } => {
+                f.write_fmt(format_args!("MouseEnter({x}, {y})"))
             }
             Event::KeyDown { key } => {
                 f.write_fmt(format_args!("KeyDown(\"{key}\")"))
