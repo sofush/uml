@@ -5,7 +5,7 @@ use crate::{
     canvas::Canvas,
     color::Color,
     drawable::Drawable,
-    interaction::{Interactable, InteractionState},
+    interaction::{InteractionState, Interactive},
 };
 
 use super::TextProperties;
@@ -66,14 +66,12 @@ impl Drawable for Label {
     }
 }
 
-impl Interactable for Label {
-    fn interaction_state(&self) -> InteractionState {
+impl Interactive for Label {
+    fn get_interaction(&self) -> InteractionState {
         self.interaction_state
     }
 
-    fn interaction_state_mut(
-        &mut self,
-    ) -> &mut crate::interaction::InteractionState {
+    fn get_interaction_mut(&mut self) -> &mut InteractionState {
         &mut self.interaction_state
     }
 }

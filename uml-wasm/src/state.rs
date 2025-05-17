@@ -78,6 +78,15 @@ impl State {
                 }
 
                 self.cursor_pos = (x, y);
+
+                let abs_cursor_pos = (
+                    self.cursor_pos.0 + self.camera.x() as i32,
+                    self.cursor_pos.1 + self.camera.y() as i32,
+                );
+
+                if let Some(document) = &mut self.document {
+                    document.move_cursor(abs_cursor_pos);
+                }
             }
             Event::KeyDown { key } => {
                 self.keys_pressed.insert(key);
@@ -140,13 +149,8 @@ impl State {
             }
         }
 
-        let cursor_pos = (
-            self.cursor_pos.0 + self.camera.x() as i32,
-            self.cursor_pos.1 + self.camera.y() as i32,
-        );
-
         if let Some(document) = &self.document {
-            document.draw(&self.canvas, &self.camera, cursor_pos);
+            document.draw(&self.canvas, &self.camera);
         }
 
         if self.translate_camera {

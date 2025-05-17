@@ -5,7 +5,7 @@ use crate::{
     camera::Camera,
     canvas::Canvas,
     drawable::Drawable,
-    interaction::{Interactable, InteractionState},
+    interaction::{InteractionState, Interactive},
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -44,18 +44,18 @@ impl Drawable for Element {
     }
 }
 
-impl Interactable for Element {
-    fn interaction_state(&self) -> InteractionState {
+impl Interactive for Element {
+    fn get_interaction(&self) -> InteractionState {
         match self {
-            Element::Rectangle(rectangle) => rectangle.interaction_state(),
-            Element::Label(label) => label.interaction_state(),
+            Element::Rectangle(rectangle) => rectangle.get_interaction(),
+            Element::Label(label) => label.get_interaction(),
         }
     }
 
-    fn interaction_state_mut(&mut self) -> &mut InteractionState {
+    fn get_interaction_mut(&mut self) -> &mut InteractionState {
         match self {
-            Element::Rectangle(rectangle) => rectangle.interaction_state_mut(),
-            Element::Label(label) => label.interaction_state_mut(),
+            Element::Rectangle(rectangle) => rectangle.get_interaction_mut(),
+            Element::Label(label) => label.get_interaction_mut(),
         }
     }
 }

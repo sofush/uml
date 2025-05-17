@@ -6,6 +6,7 @@ use crate::{
     color::Color,
     drawable::Drawable,
     elements::{Element, Rectangle},
+    interaction::Interactive,
 };
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -34,12 +35,17 @@ impl Document {
         self.synchronized = true;
     }
 
-    pub fn draw(
-        &self,
-        canvas: &impl Canvas,
-        camera: &Camera,
-        cursor_pos: (i32, i32),
-    ) {
+    pub fn move_cursor(&mut self, cursor_pos: (i32, i32)) {
+        for el in &mut self.elements {
+            match (el.is_hovered(), el.cursor_intersects(cursor_pos)) {
+                (true, false) => el.hover_leave(),
+                (false, true) => el.hover_enter(),
+                _ => (),
+            }
+        }
+    }
+
+    pub fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
         let clear_rect: Element = Rectangle::new(
             i32::MIN,
             i32::MIN,
@@ -49,6 +55,7 @@ impl Document {
             None,
         )
         .into();
+
         clear_rect.draw(canvas, camera);
 
         const SIZE: u32 = 2;
@@ -71,20 +78,8 @@ impl Document {
             }
         }
 
-        for el in &self.elements {
-            if el.cursor_intersects(cursor_pos) {
-                let color = Color::Rgb {
-                    red: 255,
-                    green: 0,
-                    blue: 0,
-                };
-                let x = 50.0;
-                let y = 50.0;
-                let rect = Rectangle::new(x as _, y as _, 50, 50, color, None);
-                rect.draw_fixed(canvas);
-            }
-
-            el.draw(canvas, camera);
+        for element in &self.elements {
+            element.draw(canvas, camera);
         }
     }
 }

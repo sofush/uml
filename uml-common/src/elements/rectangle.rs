@@ -5,7 +5,7 @@ use crate::{
     canvas::Canvas,
     color::Color,
     drawable::Drawable,
-    interaction::{Interactable, InteractionState},
+    interaction::{InteractionState, Interactive},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -67,18 +67,26 @@ impl Rectangle {
 
 impl Drawable for Rectangle {
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
-        canvas.draw_rectangle(*self, camera);
+        let mut copy = *self;
+
+        if self.is_hovered() {
+            copy.color = Color::Rgb {
+                red: 255,
+                green: 0,
+                blue: 0,
+            }
+        }
+
+        canvas.draw_rectangle(copy, camera);
     }
 }
 
-impl Interactable for Rectangle {
-    fn interaction_state(&self) -> InteractionState {
+impl Interactive for Rectangle {
+    fn get_interaction(&self) -> InteractionState {
         self.interaction_state
     }
 
-    fn interaction_state_mut(
-        &mut self,
-    ) -> &mut crate::interaction::InteractionState {
+    fn get_interaction_mut(&mut self) -> &mut InteractionState {
         &mut self.interaction_state
     }
 }

@@ -4,16 +4,28 @@ pub struct InteractionState {
 }
 
 impl InteractionState {
-    pub fn hover(&self) -> bool {
-        self.hover
+    pub fn set_hover(&mut self, value: bool) {
+        self.hover = value;
     }
 
-    pub fn set_hover(&mut self, hover: bool) {
-        self.hover = hover;
+    pub fn is_hovered(&self) -> bool {
+        self.hover
     }
 }
 
-pub trait Interactable {
-    fn interaction_state(&self) -> InteractionState;
-    fn interaction_state_mut(&mut self) -> &mut InteractionState;
+pub trait Interactive {
+    fn get_interaction(&self) -> InteractionState;
+    fn get_interaction_mut(&mut self) -> &mut InteractionState;
+
+    fn hover_enter(&mut self) {
+        self.get_interaction_mut().set_hover(true);
+    }
+
+    fn hover_leave(&mut self) {
+        self.get_interaction_mut().set_hover(false);
+    }
+
+    fn is_hovered(&self) -> bool {
+        self.get_interaction().is_hovered()
+    }
 }
