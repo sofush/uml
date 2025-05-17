@@ -11,7 +11,6 @@ use crate::client_handler::{ClientHandler, WsMessage};
 
 pub enum StateEvent {
     ClientConnected(ClientHandler),
-    ClientDisconnected,
     ClientReceived(WsMessage),
     StopSignal,
 }
@@ -32,10 +31,7 @@ async fn read_message(handlers: &mut [ClientHandler]) -> StateEvent {
         unreachable!("guarded by if-statement");
     };
 
-    match msg {
-        Some(msg) => StateEvent::ClientReceived(msg),
-        None => StateEvent::ClientDisconnected,
-    }
+    StateEvent::ClientReceived(msg)
 }
 
 async fn wait_for_event(
@@ -86,28 +82,46 @@ async fn handle_event(
             log::debug!("Client with ID {} connected!", client_handler.id());
             handlers.push(client_handler);
         }
-        StateEvent::ClientDisconnected => {
-            handlers.retain(|handler| {
-                let closed = handler.is_closed();
-
-                if closed {
-                    log::debug!(
-                        "Removing ClientHandler with ID {} as it has closed.",
-                        handler.id()
-                    );
-                }
-
-                !closed
-            });
-        }
-        StateEvent::ClientReceived(msg) => {
-            log::debug!("Client with ID {} received a message.", msg.recipient);
-            *latest_document = msg.document;
+        StateEvent::ClientReceived(WsMessage::Document {
+            recipient,
+            json,
+            document,
+        }) => {
+            log::debug!("Client with ID {} received a message.", recipient);
+            *latest_document = document;
 
             for handler in handlers {
-                if handler.id() != msg.recipient {
-                    let _ = handler.send(msg.json.clone()).await;
+                if handler.id() != recipient {
+                    let _ = handler.send(json.clone()).await;
                 }
+            }
+        }
+        StateEvent::ClientReceived(WsMessage::DeserializeError {
+            recipient,
+            error: _,
+        }) => {
+            log::debug!(
+                "Could not deserialize a message received from client with ID {}.",
+                recipient
+            );
+            if let Some(index) =
+                handlers.iter().position(|c| c.id() == recipient)
+            {
+                handlers.remove(index);
+                log::debug!("Client with ID {} has been removed.", recipient);
+            }
+        }
+        StateEvent::ClientReceived(WsMessage::Closed { recipient }) => {
+            log::debug!(
+                "Removing client with ID {} because it has disconnected.",
+                recipient
+            );
+
+            if let Some(index) =
+                handlers.iter().position(|c| c.id() == recipient)
+            {
+                handlers.remove(index);
+                log::debug!("Client with ID {} has been removed.", recipient);
             }
         }
         StateEvent::StopSignal => {

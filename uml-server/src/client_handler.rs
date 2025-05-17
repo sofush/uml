@@ -6,10 +6,20 @@ use uml_common::document::Document;
 
 use crate::id::Id;
 
-pub struct WsMessage {
-    pub recipient: Id,
-    pub json: String,
-    pub document: Document,
+pub enum WsMessage {
+    Document {
+        recipient: Id,
+        json: String,
+        document: Document,
+    },
+    Closed {
+        recipient: Id,
+    },
+    DeserializeError {
+        recipient: Id,
+        #[allow(unused)]
+        error: serde_json::Error,
+    },
 }
 
 pub struct ClientHandler {
@@ -34,25 +44,33 @@ impl ClientHandler {
         self.id
     }
 
-    pub async fn read(&mut self) -> Option<WsMessage> {
-        let msg = self.stream.recv().await?;
+    pub async fn read(&mut self) -> WsMessage {
+        let msg = self.stream.recv().await;
         log::trace!(
             "Client with ID {} received a WebSocket message: {msg:?}",
             self.id
         );
 
-        let Text(text) = msg else {
-            return None;
+        let json = match msg {
+            Some(Text(text)) => text.to_string(),
+            _ => {
+                return WsMessage::Closed {
+                    recipient: self.id(),
+                };
+            }
         };
 
-        let json = text.to_string();
-        let document = serde_json::from_str(&json).ok()?;
-
-        Some(WsMessage {
-            recipient: self.id,
-            json,
-            document,
-        })
+        match serde_json::from_str(&json) {
+            Ok(document) => WsMessage::Document {
+                recipient: self.id(),
+                json,
+                document,
+            },
+            Err(e) => WsMessage::DeserializeError {
+                recipient: self.id(),
+                error: e,
+            },
+        }
     }
 
     pub async fn send(
@@ -63,10 +81,6 @@ impl ClientHandler {
     }
 
     pub async fn close(self) {
-        if self.is_closed() {
-            return;
-        }
-
         let close_reason = actix_ws::CloseReason {
             code: actix_ws::CloseCode::Restart,
             description: None,
@@ -76,10 +90,6 @@ impl ClientHandler {
             let _ = self.session.close(Some(close_reason)).await;
         })
         .await;
-    }
-
-    pub fn is_closed(&self) -> bool {
-        self.stream.is_closed()
     }
 }
 
