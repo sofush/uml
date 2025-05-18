@@ -85,15 +85,13 @@ impl State {
                 }
             }
             Event::KeyDown { key } => {
-                match (&mut self.document, key.as_str(), self.drag_state) {
-                    (Some(doc), "a", DragState::None) => {
-                        let x = self.cursor_pos.0 + self.camera.x() as i32;
-                        let y = self.cursor_pos.1 + self.camera.y() as i32;
-                        let class =
-                            Class::new(x, y, 100, 100, None, None, Some(3));
-                        doc.add_element(class);
-                    }
-                    _ => (),
+                if let (Some(doc), "a", DragState::None) =
+                    (&mut self.document, key.as_str(), self.drag_state)
+                {
+                    let x = self.cursor_pos.0 + self.camera.x() as i32;
+                    let y = self.cursor_pos.1 + self.camera.y() as i32;
+                    let class = Class::new(x, y, 100, 100, None, None, Some(3));
+                    doc.add_element(class);
                 }
 
                 self.keys_pressed.insert(key);
@@ -269,28 +267,28 @@ impl State {
                     return;
                 };
 
-                doc.elements_mut().iter_mut().find(|el| el.id() == id).map(
-                    |el| {
-                        x -= el.x();
-                        y -= el.y();
-                        el.click(x, y);
-                        log::debug!("Element with ID {} was clicked.", el.id());
-                    },
-                );
+                if let Some(el) =
+                    doc.elements_mut().iter_mut().find(|el| el.id() == id)
+                {
+                    x -= el.x();
+                    y -= el.y();
+                    el.click(x, y);
+                    log::debug!("Element with ID {} was clicked.", el.id());
+                }
 
                 self.drag_state = DragState::None;
-                return;
             }
             DragState::DraggingElement { id } => {
                 if !lmb {
                     self.drag_state = DragState::None;
-                    self.document.as_mut().map(|d| d.set_sync(false));
+                    if let Some(doc) = self.document.as_mut() {
+                        doc.set_sync(false)
+                    };
                     return;
                 }
 
                 move_element(id);
             }
-            _ => (),
         }
     }
 

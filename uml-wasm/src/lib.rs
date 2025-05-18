@@ -99,13 +99,21 @@ fn on_key_up(callback: impl Fn(Event) + 'static) {
 }
 
 fn on_contextmenu() {
-    document().get_element_by_id("canvas").map(|c| {
-        let options = EventListenerOptions::enable_prevent_default();
-        EventListener::new_with_options(&c, "contextmenu", options, |e| {
-            e.prevent_default();
-        })
-        .forget()
-    });
+    let Some(canvas) = document().get_element_by_id("canvas") else {
+        return;
+    };
+
+    let cb = |e: &web_sys::Event| {
+        e.prevent_default();
+    };
+
+    EventListener::new_with_options(
+        &canvas,
+        "contextmenu",
+        EventListenerOptions::enable_prevent_default(),
+        cb,
+    )
+    .forget()
 }
 
 #[wasm_bindgen]
