@@ -13,6 +13,7 @@ use uml_common::{
     document::Document,
     drawable::Drawable,
     elements::{Info, Rectangle, TextProperties},
+    id::Id,
     interaction::Interactive,
 };
 
@@ -186,6 +187,31 @@ impl State {
         let lmb = self.mouse_buttons.contains(&MouseButton::Left);
         let translate_key = self.keys_pressed.contains(" ");
 
+        let mut move_element = |id: Id| {
+            if delta_x == 0 && delta_y == 0 {
+                return;
+            }
+
+            let Some(doc) = &mut self.document else {
+                return;
+            };
+
+            let Some(el) =
+                doc.elements_mut().iter_mut().find(|el| el.id() == id)
+            else {
+                return;
+            };
+
+            log::trace!(
+                "Element with ID {} was moved: ({}, {}).",
+                el.id(),
+                delta_x,
+                delta_y
+            );
+            el.adjust_position(delta_x, delta_y);
+            doc.set_sync(false);
+        };
+
         match self.drag_state {
             DragState::None if lmb => {
                 if translate_key {
@@ -204,8 +230,8 @@ impl State {
                     .iter()
                     .find(|el| el.cursor_intersects(abs_cursor_pos))
                 {
-                    self.drag_state = DragState::Element { id: el.id() };
-                    log::debug!("Now dragging element with id {}", el.id());
+                    self.drag_state =
+                        DragState::PressingElement { id: el.id() };
                 }
             }
             DragState::Camera => {
@@ -216,25 +242,43 @@ impl State {
                     self.drag_state = DragState::None;
                 }
             }
-            DragState::Element { id } => {
+            DragState::PressingElement { id } => {
+                if lmb {
+                    if delta_x == 0 && delta_y == 0 {
+                        return;
+                    }
+
+                    move_element(id);
+                    self.drag_state = DragState::DraggingElement { id };
+                    return;
+                }
+
+                let (mut x, mut y) = self.get_absolute_cursor_pos();
+
+                let Some(doc) = &mut self.document else {
+                    return;
+                };
+
+                doc.elements_mut().iter_mut().find(|el| el.id() == id).map(
+                    |el| {
+                        x -= el.x();
+                        y -= el.y();
+                        el.click(x, y);
+                        log::debug!("Element with ID {} was clicked.", el.id());
+                    },
+                );
+
+                self.drag_state = DragState::None;
+                return;
+            }
+            DragState::DraggingElement { id } => {
                 if !lmb {
                     self.drag_state = DragState::None;
                     self.document.as_mut().map(|d| d.set_sync(false));
                     return;
                 }
 
-                let Some(doc) = &mut self.document else {
-                    return;
-                };
-
-                let Some(el) =
-                    doc.elements_mut().iter_mut().find(|el| el.id() == id)
-                else {
-                    return;
-                };
-
-                el.adjust_position(delta_x, delta_y);
-                doc.set_sync(false);
+                move_element(id);
             }
             _ => (),
         }

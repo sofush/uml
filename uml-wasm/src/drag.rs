@@ -4,7 +4,8 @@ use uml_common::id::Id;
 pub enum DragState {
     None,
     Camera,
-    Element { id: Id },
+    PressingElement { id: Id },
+    DraggingElement { id: Id },
 }
 
 impl Default for DragState {

@@ -18,6 +18,9 @@ pub trait Interactive {
     fn get_interaction_mut(&mut self) -> &mut InteractionState;
     fn adjust_position(&mut self, delta_x: i32, delta_y: i32);
 
+    #[allow(unused_variables)]
+    fn click(&mut self, x: i32, y: i32) {}
+
     fn hover_enter(&mut self) {
         self.get_interaction_mut().set_hover(true);
     }

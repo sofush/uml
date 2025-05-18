@@ -23,6 +23,20 @@ pub struct Element {
 }
 
 impl Element {
+    pub fn x(&self) -> i32 {
+        match &self.inner {
+            ElementType::Rectangle(rectangle) => rectangle.x(),
+            ElementType::Label(label) => label.x(),
+        }
+    }
+
+    pub fn y(&self) -> i32 {
+        match &self.inner {
+            ElementType::Rectangle(rectangle) => rectangle.y(),
+            ElementType::Label(label) => label.y(),
+        }
+    }
+
     pub fn cursor_intersects(&self, cursor_pos: (i32, i32)) -> bool {
         let cx = cursor_pos.0;
         let cy = cursor_pos.1;
@@ -95,6 +109,13 @@ impl Interactive for Element {
             ElementType::Label(label) => {
                 label.adjust_position(delta_x, delta_y)
             }
+        }
+    }
+
+    fn click(&mut self, x: i32, y: i32) {
+        match &mut self.inner {
+            ElementType::Rectangle(rectangle) => rectangle.click(x, y),
+            ElementType::Label(label) => label.click(x, y),
         }
     }
 }
