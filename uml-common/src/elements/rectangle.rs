@@ -67,16 +67,7 @@ impl Rectangle {
 
 impl Drawable for Rectangle {
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
-        let mut copy = *self;
-
-        if self.is_hovered() {
-            copy.color = Color::Rgb {
-                red: 255,
-                green: 0,
-                blue: 0,
-            }
-        }
-
+        let copy = *self;
         canvas.draw_rectangle(copy, camera);
     }
 }
