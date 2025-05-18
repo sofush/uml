@@ -1,5 +1,8 @@
 use event::Event;
-use gloo::{events::EventListener, utils::window};
+use gloo::{
+    events::{EventListener, EventListenerOptions},
+    utils::{document, window},
+};
 use html_canvas::HtmlCanvas;
 use log::Level;
 use mouse_button::MouseButton;
@@ -95,6 +98,16 @@ fn on_key_up(callback: impl Fn(Event) + 'static) {
     })
 }
 
+fn on_contextmenu() {
+    document().get_element_by_id("canvas").map(|c| {
+        let options = EventListenerOptions::enable_prevent_default();
+        EventListener::new_with_options(&c, "contextmenu", options, |e| {
+            e.prevent_default();
+        })
+        .forget()
+    });
+}
+
 #[wasm_bindgen]
 pub fn on_redraw() {
     state::handle_event(Event::Redraw);
@@ -118,6 +131,7 @@ async fn run() -> Result<(), JsValue> {
     on_mouse_enter(state::handle_event);
     on_key_down(state::handle_event);
     on_key_up(state::handle_event);
+    on_contextmenu();
 
     Ok(())
 }
