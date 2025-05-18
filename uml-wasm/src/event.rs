@@ -5,6 +5,8 @@ use crate::{mouse_button::MouseButton, wsclient::WsEvent};
 #[derive(Clone)]
 pub enum Event {
     Resize,
+    Initialize,
+    Redraw,
     MouseDown { button: MouseButton, x: i32, y: i32 },
     MouseUp { button: MouseButton, x: i32, y: i32 },
     MouseMove { x: i32, y: i32 },
@@ -12,7 +14,6 @@ pub enum Event {
     MouseEnter { x: i32, y: i32 },
     KeyDown { key: String },
     KeyUp { key: String },
-    Initialize,
     WebSocket(WsEvent),
 }
 
@@ -61,6 +62,7 @@ impl Display for Event {
             Event::WebSocket(msg) => {
                 f.write_fmt(format_args!("WsMessage({msg:?})"))
             }
+            Event::Redraw => f.write_str("Redraw"),
         }
     }
 }

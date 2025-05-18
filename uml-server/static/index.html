@@ -2,33 +2,39 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UML</title>
-    <style>
-        html,
-        body,
-        canvas {
-            margin: 0px;
-            padding: 0px;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            position: absolute;
-            z-index: 0;
-        }
-    </style>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>UML</title>
+	<style>
+		html,
+		body,
+		canvas {
+			margin: 0px;
+			padding: 0px;
+			width: 100%;
+			height: 100%;
+			overflow: hidden;
+			position: absolute;
+			z-index: 0;
+		}
+	</style>
 </head>
 
 <body>
-    <canvas id="canvas"></canvas>
-    <script type="module">
-        import init from '/static/wasm/uml_wasm.js';
+	<canvas id="canvas"></canvas>
+	<script type="module">
+		import init, {on_redraw} from '/static/wasm/uml_wasm.js';
 
-        init().then(async () => {
-            console.log('Webassembly has loaded.');
-        });
-    </script>
+		function cb() {
+			on_redraw();
+			window.requestAnimationFrame(cb);
+		};
+
+		init().then(async () => {
+			console.log('Webassembly has loaded.');
+			window.requestAnimationFrame(cb);
+		});
+	</script>
 </body>
 
 </html>

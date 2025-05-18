@@ -95,6 +95,11 @@ fn on_key_up(callback: impl Fn(Event) + 'static) {
     })
 }
 
+#[wasm_bindgen]
+pub fn on_redraw() {
+    state::handle_event(Event::Redraw);
+}
+
 #[wasm_bindgen(start)]
 async fn run() -> Result<(), JsValue> {
     console_log::init_with_level(Level::Debug).unwrap();
@@ -103,7 +108,6 @@ async fn run() -> Result<(), JsValue> {
     canvas.update_size();
 
     SHARED_STATE.set(Some(State::new(canvas)));
-
     state::handle_event(Event::Initialize);
 
     on_resize(state::handle_event);
@@ -114,5 +118,6 @@ async fn run() -> Result<(), JsValue> {
     on_mouse_enter(state::handle_event);
     on_key_down(state::handle_event);
     on_key_up(state::handle_event);
+
     Ok(())
 }

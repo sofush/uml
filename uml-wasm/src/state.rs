@@ -134,23 +134,25 @@ impl State {
                     return;
                 }
             },
+            Event::Redraw => {
+                if let Some(document) = &self.document {
+                    document.draw(&self.canvas, &self.camera);
+                }
+
+                if let DragState::Camera = self.drag_state {
+                    let props = TextProperties::new(20.0, "Arial");
+                    let text =
+                        format!("{}x {}y", self.camera.x(), self.camera.y());
+                    let info = Info::new(text, props);
+                    info.draw_fixed(&self.canvas);
+                }
+            }
         };
 
         if event.is_mouse() || event.is_keyboard() {
             let delta_x = delta_cursor_pos.map(|d| d.0).unwrap_or(0);
             let delta_y = delta_cursor_pos.map(|d| d.1).unwrap_or(0);
             self.handle_drag(delta_x, delta_y);
-        }
-
-        if let Some(document) = &self.document {
-            document.draw(&self.canvas, &self.camera);
-        }
-
-        if let DragState::Camera = self.drag_state {
-            let props = TextProperties::new(20.0, "Arial");
-            let text = format!("{}x {}y", self.camera.x(), self.camera.y());
-            let info = Info::new(text, props);
-            info.draw_fixed(&self.canvas);
         }
 
         self.sync_document();
