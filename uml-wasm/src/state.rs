@@ -5,7 +5,9 @@ use crate::{
     mouse_button::MouseButton,
     wsclient::{WsClient, WsEvent},
 };
-use gloo::{net::websocket::Message, timers::callback::Timeout};
+use gloo::{
+    net::websocket::Message, timers::callback::Timeout, utils::document,
+};
 use std::{cell::RefCell, collections::HashSet, thread_local};
 use uml_common::{
     camera::Camera,
@@ -15,6 +17,7 @@ use uml_common::{
     id::Id,
     interaction::Interactive,
 };
+use wasm_bindgen::JsCast as _;
 
 thread_local! {
     pub static SHARED_STATE: RefCell<Option<State>> = const { RefCell::new(None) };
@@ -216,6 +219,7 @@ impl State {
         match self.drag_state {
             DragState::None if lmb => {
                 if translate_key {
+                    self.set_cursor("grabbing");
                     self.drag_state = DragState::Camera;
                     return;
                 }
@@ -235,11 +239,16 @@ impl State {
                         DragState::PressingElement { id: el.id() };
                 }
             }
+            DragState::None => {
+                let cursor = if translate_key { "grab" } else { "default" };
+                self.set_cursor(cursor);
+            }
             DragState::Camera => {
                 self.camera.translate(-delta_x as _, -delta_y as _);
                 log::trace!("Camera state after translate: {:?}", self.camera);
 
                 if !lmb || !translate_key {
+                    self.set_cursor("default");
                     self.drag_state = DragState::None;
                 }
             }
@@ -282,6 +291,23 @@ impl State {
                 move_element(id);
             }
             _ => (),
+        }
+    }
+
+    pub fn set_cursor(&self, value: &str) {
+        let d = document();
+        let Some(canvas) = d.get_element_by_id("canvas") else {
+            log::error!("Could not find canvas HTML element.");
+            return;
+        };
+
+        let Some(el) = canvas.dyn_ref::<web_sys::HtmlCanvasElement>() else {
+            log::error!("Could not get cast canvas element into HTML element.");
+            return;
+        };
+
+        if el.style().set_property("cursor", value).is_err() {
+            log::error!("Could not set cursor style.");
         }
     }
 

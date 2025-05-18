@@ -28,6 +28,7 @@ features = [
     'WebSocket',
     'MouseEvent',
 		'TextMetrics',
+		'CssStyleDeclaration',
 ]
 
 [lib]
