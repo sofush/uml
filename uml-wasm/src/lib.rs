@@ -6,6 +6,7 @@ use mouse_button::MouseButton;
 use state::{SHARED_STATE, State};
 use wasm_bindgen::prelude::*;
 
+mod drag;
 mod event;
 mod html_canvas;
 mod mouse_button;

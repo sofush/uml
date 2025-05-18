@@ -42,6 +42,20 @@ impl Element {
         cx >= l && cx <= r && cy >= t && cy <= b
     }
 
+    pub fn as_interactive(&self) -> &dyn Interactive {
+        match &self.inner {
+            ElementType::Rectangle(rectangle) => rectangle,
+            ElementType::Label(label) => label,
+        }
+    }
+
+    pub fn as_interactive_mut(&mut self) -> &mut dyn Interactive {
+        match &mut self.inner {
+            ElementType::Rectangle(rectangle) => rectangle,
+            ElementType::Label(label) => label,
+        }
+    }
+
     pub fn id(&self) -> Id {
         self.id
     }
@@ -70,6 +84,17 @@ impl Interactive for Element {
                 rectangle.get_interaction_mut()
             }
             ElementType::Label(label) => label.get_interaction_mut(),
+        }
+    }
+
+    fn adjust_position(&mut self, delta_x: i32, delta_y: i32) {
+        match &mut self.inner {
+            ElementType::Rectangle(rectangle) => {
+                rectangle.adjust_position(delta_x, delta_y)
+            }
+            ElementType::Label(label) => {
+                label.adjust_position(delta_x, delta_y)
+            }
         }
     }
 }

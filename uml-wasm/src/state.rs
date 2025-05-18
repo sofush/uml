@@ -1,4 +1,5 @@
 use crate::{
+    drag::DragState,
     event::Event,
     html_canvas::HtmlCanvas,
     mouse_button::MouseButton,
@@ -12,13 +13,12 @@ use uml_common::{
     document::Document,
     drawable::Drawable,
     elements::{Info, Rectangle, TextProperties},
+    interaction::Interactive,
 };
 
 thread_local! {
     pub static SHARED_STATE: RefCell<Option<State>> = const { RefCell::new(None) };
 }
-
-const TRANSLATE_KEY: &str = " ";
 
 pub fn handle_event(event: Event) {
     SHARED_STATE.with_borrow_mut(|state| {
@@ -36,9 +36,8 @@ pub struct State {
     camera: Camera,
     keys_pressed: HashSet<String>,
     cursor_pos: (i32, i32),
-    show_cursor: bool,
     mouse_buttons: HashSet<MouseButton>,
-    translate_camera: bool,
+    drag_state: DragState,
     ws: Option<WsClient>,
 }
 
@@ -52,15 +51,14 @@ impl State {
             keys_pressed: HashSet::new(),
             mouse_buttons: HashSet::new(),
             cursor_pos: (0, 0),
-            translate_camera: false,
-            show_cursor: false,
+            drag_state: DragState::None,
         }
     }
 
     pub fn handle_event(&mut self, event: Event) {
         log::trace!("Handling event: {event}...");
 
-        self.show_cursor = !matches!(&event, Event::MouseOut { .. });
+        let mut delta_cursor_pos = None;
 
         match event.clone() {
             Event::MouseDown { button, .. } => {
@@ -70,31 +68,31 @@ impl State {
                 self.mouse_buttons.remove(&button);
             }
             Event::MouseMove { x, y }
-            | Event::MouseOut { x, y }
-            | Event::MouseEnter { x, y } => {
-                let delta_x = x - self.cursor_pos.0;
-                let delta_y = y - self.cursor_pos.1;
-
-                if self.translate_camera {
-                    self.camera.translate(-delta_x as f64, -delta_y as f64);
-                    log::trace!(
-                        "Camera state after translate: {:?}",
-                        self.camera
-                    );
-                }
+            | Event::MouseEnter { x, y }
+            | Event::MouseOut { x, y } => {
+                delta_cursor_pos =
+                    Some((x - self.cursor_pos.0, y - self.cursor_pos.1));
 
                 self.cursor_pos = (x, y);
-
-                let abs_cursor_pos = (
-                    self.cursor_pos.0 + self.camera.x() as i32,
-                    self.cursor_pos.1 + self.camera.y() as i32,
-                );
+                let abs_cursor_pos = self.get_absolute_cursor_pos();
 
                 if let Some(document) = &mut self.document {
-                    document.update_cursor(abs_cursor_pos, self.show_cursor);
+                    let visible = !matches!(&event, Event::MouseOut { .. });
+                    document.update_cursor(abs_cursor_pos, visible);
                 }
             }
             Event::KeyDown { key } => {
+                match (&mut self.document, key.as_str(), self.drag_state) {
+                    (Some(doc), "a", DragState::None) => {
+                        let x = self.cursor_pos.0 + self.camera.x() as i32;
+                        let y = self.cursor_pos.1 + self.camera.y() as i32;
+                        let rect =
+                            Rectangle::new(x, y, 100, 100, BLACK, Some(3));
+                        doc.add_element(rect);
+                    }
+                    _ => (),
+                }
+
                 self.keys_pressed.insert(key);
             }
             Event::KeyUp { key } => {
@@ -125,7 +123,7 @@ impl State {
                         if let Ok(mut document) =
                             serde_json::from_str::<Document>(&text)
                         {
-                            document.assume_sync();
+                            document.set_sync(true);
                             self.document = Some(document);
                         }
                     }
@@ -138,28 +136,17 @@ impl State {
             },
         };
 
-        {
-            let button = self.mouse_buttons.contains(&MouseButton::Left);
-            let key = self.keys_pressed.contains(TRANSLATE_KEY);
-            self.translate_camera = button && key;
-        }
-
-        if let Event::MouseDown { x, y, .. } = event {
-            if let Some(document) = &mut self.document {
-                if !self.translate_camera {
-                    let x = x + self.camera.x() as i32;
-                    let y = y + self.camera.y() as i32;
-                    let rect = Rectangle::new(x, y, 100, 100, BLACK, Some(3));
-                    document.add_element(rect);
-                }
-            }
+        if event.is_mouse() || event.is_keyboard() {
+            let delta_x = delta_cursor_pos.map(|d| d.0).unwrap_or(0);
+            let delta_y = delta_cursor_pos.map(|d| d.1).unwrap_or(0);
+            self.handle_drag(delta_x, delta_y);
         }
 
         if let Some(document) = &self.document {
             document.draw(&self.canvas, &self.camera);
         }
 
-        if self.translate_camera {
+        if let DragState::Camera = self.drag_state {
             let props = TextProperties::new(20.0, "Arial");
             let text = format!("{}x {}y", self.camera.x(), self.camera.y());
             let info = Info::new(text, props);
@@ -174,7 +161,7 @@ impl State {
             return;
         };
 
-        if document.synchronized() {
+        if document.is_sync() {
             return;
         }
 
@@ -192,6 +179,71 @@ impl State {
 
         log::trace!("Attempting to synchronize document.");
         ws.send(vec![Message::Text(document_json)]);
-        document.assume_sync();
+        document.set_sync(true);
+    }
+
+    pub fn handle_drag(&mut self, delta_x: i32, delta_y: i32) {
+        let lmb = self.mouse_buttons.contains(&MouseButton::Left);
+        let translate_key = self.keys_pressed.contains(" ");
+
+        match self.drag_state {
+            DragState::None if lmb => {
+                if translate_key {
+                    self.drag_state = DragState::Camera;
+                    return;
+                }
+
+                let Some(doc) = &self.document else {
+                    return;
+                };
+
+                let abs_cursor_pos = self.get_absolute_cursor_pos();
+
+                if let Some(el) = doc
+                    .elements()
+                    .iter()
+                    .find(|el| el.cursor_intersects(abs_cursor_pos))
+                {
+                    self.drag_state = DragState::Element { id: el.id() };
+                    log::debug!("Now dragging element with id {}", el.id());
+                }
+            }
+            DragState::Camera => {
+                self.camera.translate(-delta_x as _, -delta_y as _);
+                log::trace!("Camera state after translate: {:?}", self.camera);
+
+                if !lmb || !translate_key {
+                    self.drag_state = DragState::None;
+                }
+            }
+            DragState::Element { id } => {
+                if !lmb {
+                    self.drag_state = DragState::None;
+                    self.document.as_mut().map(|d| d.set_sync(false));
+                    return;
+                }
+
+                let Some(doc) = &mut self.document else {
+                    return;
+                };
+
+                let Some(el) =
+                    doc.elements_mut().iter_mut().find(|el| el.id() == id)
+                else {
+                    return;
+                };
+
+                el.adjust_position(delta_x, delta_y);
+                doc.set_sync(false);
+            }
+            _ => (),
+        }
+    }
+
+    pub fn get_absolute_cursor_pos(&self) -> (i32, i32) {
+        (
+            self.cursor_pos.0 + self.camera.x() as i32,
+            self.cursor_pos.1 + self.camera.y() as i32,
+        )
     }
 }

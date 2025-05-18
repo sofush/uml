@@ -27,17 +27,21 @@ impl Document {
         &self.elements
     }
 
+    pub fn elements_mut(&mut self) -> &mut Vec<Element> {
+        &mut self.elements
+    }
+
     pub fn add_element(&mut self, el: impl Into<Element>) {
         self.local.synchronized = false;
         self.elements.push(el.into());
     }
 
-    pub fn synchronized(&self) -> bool {
+    pub fn is_sync(&self) -> bool {
         self.local.synchronized
     }
 
-    pub fn assume_sync(&mut self) {
-        self.local.synchronized = true;
+    pub fn set_sync(&mut self, value: bool) {
+        self.local.synchronized = value;
     }
 
     pub fn update_cursor(&mut self, cursor_pos: (i32, i32), visible: bool) {

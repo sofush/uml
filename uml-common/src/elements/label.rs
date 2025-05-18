@@ -74,4 +74,9 @@ impl Interactive for Label {
     fn get_interaction_mut(&mut self) -> &mut InteractionState {
         &mut self.interaction_state
     }
+
+    fn adjust_position(&mut self, delta_x: i32, delta_y: i32) {
+        self.x += delta_x;
+        self.y += delta_y;
+    }
 }

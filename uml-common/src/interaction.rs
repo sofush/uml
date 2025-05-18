@@ -16,6 +16,7 @@ impl InteractionState {
 pub trait Interactive {
     fn get_interaction(&self) -> InteractionState;
     fn get_interaction_mut(&mut self) -> &mut InteractionState;
+    fn adjust_position(&mut self, delta_x: i32, delta_y: i32);
 
     fn hover_enter(&mut self) {
         self.get_interaction_mut().set_hover(true);
