@@ -13,9 +13,9 @@ use super::Rectangle;
 
 const DEFAULT_COLOR: Color = const {
     Color::Rgb {
-        red: 248,
-        green: 248,
-        blue: 248,
+        red: 244,
+        green: 244,
+        blue: 244,
     }
 };
 
@@ -26,6 +26,17 @@ const DEFAULT_STROKE: Stroke = const {
             red: 210,
             green: 210,
             blue: 210,
+        },
+    )
+};
+
+const HIGHLIGHT_STROKE: Stroke = const {
+    Stroke::new(
+        2,
+        Color::Rgb {
+            red: 142,
+            green: 202,
+            blue: 230,
         },
     )
 };
@@ -98,7 +109,12 @@ impl Class {
 
 impl Drawable for Class {
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
-        let stroke = self.stroke.unwrap_or(DEFAULT_STROKE);
+        let stroke = if self.is_hovered() {
+            HIGHLIGHT_STROKE
+        } else {
+            self.stroke.unwrap_or(DEFAULT_STROKE)
+        };
+
         let rect = Rectangle::new(
             self.x,
             self.y,
