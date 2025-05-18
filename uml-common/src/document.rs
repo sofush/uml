@@ -9,12 +9,17 @@ use crate::{
     interaction::Interactive,
 };
 
+#[derive(Clone, Debug, PartialEq, Default)]
+struct LocalData {
+    synchronized: bool,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Document {
     elements: Vec<Element>,
     color: Color,
     #[serde(skip)]
-    synchronized: bool,
+    local: LocalData,
 }
 
 impl Document {
@@ -23,16 +28,16 @@ impl Document {
     }
 
     pub fn add_element(&mut self, el: impl Into<Element>) {
-        self.synchronized = false;
+        self.local.synchronized = false;
         self.elements.push(el.into());
     }
 
     pub fn synchronized(&self) -> bool {
-        self.synchronized
+        self.local.synchronized
     }
 
     pub fn assume_sync(&mut self) {
-        self.synchronized = true;
+        self.local.synchronized = true;
     }
 
     pub fn update_cursor(&mut self, cursor_pos: (i32, i32), visible: bool) {
@@ -94,7 +99,7 @@ impl Default for Document {
                 blue: 240,
             },
             elements: Default::default(),
-            synchronized: true,
+            local: LocalData { synchronized: true },
         }
     }
 }
