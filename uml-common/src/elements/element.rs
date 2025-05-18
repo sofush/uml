@@ -5,13 +5,21 @@ use crate::{
     camera::Camera,
     canvas::Canvas,
     drawable::Drawable,
+    id::Id,
     interaction::{InteractionState, Interactive},
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum Element {
+enum ElementType {
     Rectangle(Rectangle),
     Label(Label),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Element {
+    #[serde(skip)]
+    id: Id,
+    inner: ElementType,
 }
 
 impl Element {
@@ -19,55 +27,67 @@ impl Element {
         let cx = cursor_pos.0;
         let cy = cursor_pos.1;
 
-        let (l, t, r, b) = match self {
-            Element::Rectangle(r) => (
+        let (l, t, r, b) = match self.inner {
+            ElementType::Rectangle(r) => (
                 r.x(),
                 r.y(),
                 r.x() + r.width() as i32,
                 r.y() + r.height() as i32,
             ),
-            Element::Label(_) => {
+            ElementType::Label(_) => {
                 return false;
             }
         };
 
         cx >= l && cx <= r && cy >= t && cy <= b
     }
+
+    pub fn id(&self) -> Id {
+        self.id
+    }
 }
 
 impl Drawable for Element {
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
-        match self {
-            Element::Rectangle(rectangle) => rectangle.draw(canvas, camera),
-            Element::Label(label) => label.draw(canvas, camera),
+        match &self.inner {
+            ElementType::Rectangle(rectangle) => rectangle.draw(canvas, camera),
+            ElementType::Label(label) => label.draw(canvas, camera),
         }
     }
 }
 
 impl Interactive for Element {
     fn get_interaction(&self) -> InteractionState {
-        match self {
-            Element::Rectangle(rectangle) => rectangle.get_interaction(),
-            Element::Label(label) => label.get_interaction(),
+        match &self.inner {
+            ElementType::Rectangle(rectangle) => rectangle.get_interaction(),
+            ElementType::Label(label) => label.get_interaction(),
         }
     }
 
     fn get_interaction_mut(&mut self) -> &mut InteractionState {
-        match self {
-            Element::Rectangle(rectangle) => rectangle.get_interaction_mut(),
-            Element::Label(label) => label.get_interaction_mut(),
+        match &mut self.inner {
+            ElementType::Rectangle(rectangle) => {
+                rectangle.get_interaction_mut()
+            }
+            ElementType::Label(label) => label.get_interaction_mut(),
         }
     }
 }
 
 impl From<Rectangle> for Element {
     fn from(value: Rectangle) -> Self {
-        Self::Rectangle(value)
+        Self {
+            id: Id::default(),
+            inner: ElementType::Rectangle(value),
+        }
     }
 }
 
 impl From<Label> for Element {
     fn from(value: Label) -> Self {
-        Self::Label(value)
+        Self {
+            id: Id::default(),
+            inner: ElementType::Label(value),
+        }
     }
 }

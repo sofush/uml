@@ -10,7 +10,6 @@ use state::State;
 use tokio::sync::Mutex;
 
 mod client_handler;
-mod id;
 mod serve;
 mod state;
 

@@ -2,9 +2,7 @@ use std::time::Duration;
 
 use actix_ws::AggregatedMessage::{self, *};
 use tokio::sync::mpsc::Receiver;
-use uml_common::document::Document;
-
-use crate::id::Id;
+use uml_common::{document::Document, id::Id};
 
 pub enum WsMessage {
     Document {
