@@ -1,4 +1,7 @@
-use crate::{camera::Camera, canvas::Canvas, color::BLACK, drawable::Drawable};
+use crate::{
+    camera::Camera, canvas::Canvas, color::BLACK, drawable::Drawable,
+    stroke::Stroke,
+};
 
 use super::{Label, Rectangle, TextProperties};
 
@@ -39,6 +42,7 @@ impl Drawable for Info {
                 blue: 0,
             },
             None,
+            Some(Stroke::new(1, BLACK)),
         );
         bg.draw_fixed(canvas);
 

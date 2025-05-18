@@ -42,7 +42,14 @@ impl HtmlCanvas {
 
 impl Canvas for HtmlCanvas {
     fn draw_rectangle(&self, rect: Rectangle, camera: &Camera) {
+        self.context.begin_path();
         self.context.set_fill_style_str(&rect.color().to_string());
+
+        if let Some(stroke) = rect.stroke() {
+            self.context
+                .set_stroke_style_str(&stroke.color().to_string());
+            self.context.set_line_width(stroke.width() as _);
+        }
 
         if let Some(radius) = rect.radius() {
             self.context.begin_path();
@@ -61,15 +68,19 @@ impl Canvas for HtmlCanvas {
                 log::error!("Could not draw rounded rect.");
                 return;
             };
-
-            self.context.fill();
         } else {
-            self.context.fill_rect(
+            self.context.rect(
                 rect.x() as f64 - camera.x(),
                 rect.y() as f64 - camera.y(),
                 rect.width() as f64,
                 rect.height() as f64,
             );
+        }
+
+        self.context.fill();
+
+        if rect.stroke().is_some() {
+            self.context.stroke();
         }
     }
 

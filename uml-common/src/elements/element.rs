@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{Label, rectangle::Rectangle};
+use super::{Class, Label, rectangle::Rectangle};
 use crate::{
     camera::Camera,
     canvas::Canvas,
@@ -13,6 +13,7 @@ use crate::{
 enum ElementType {
     Rectangle(Rectangle),
     Label(Label),
+    Class(Class),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -27,6 +28,7 @@ impl Element {
         match &self.inner {
             ElementType::Rectangle(rectangle) => rectangle.x(),
             ElementType::Label(label) => label.x(),
+            ElementType::Class(class) => class.x(),
         }
     }
 
@@ -34,6 +36,7 @@ impl Element {
         match &self.inner {
             ElementType::Rectangle(rectangle) => rectangle.y(),
             ElementType::Label(label) => label.y(),
+            ElementType::Class(class) => class.y(),
         }
     }
 
@@ -51,6 +54,12 @@ impl Element {
             ElementType::Label(_) => {
                 return false;
             }
+            ElementType::Class(c) => (
+                c.x(),
+                c.y(),
+                c.x() + c.width() as i32,
+                c.y() + c.height() as i32,
+            ),
         };
 
         cx >= l && cx <= r && cy >= t && cy <= b
@@ -60,6 +69,7 @@ impl Element {
         match &self.inner {
             ElementType::Rectangle(rectangle) => rectangle,
             ElementType::Label(label) => label,
+            ElementType::Class(class) => class,
         }
     }
 
@@ -67,6 +77,7 @@ impl Element {
         match &mut self.inner {
             ElementType::Rectangle(rectangle) => rectangle,
             ElementType::Label(label) => label,
+            ElementType::Class(class) => class,
         }
     }
 
@@ -80,6 +91,7 @@ impl Drawable for Element {
         match &self.inner {
             ElementType::Rectangle(rectangle) => rectangle.draw(canvas, camera),
             ElementType::Label(label) => label.draw(canvas, camera),
+            ElementType::Class(class) => class.draw(canvas, camera),
         }
     }
 }
@@ -89,6 +101,7 @@ impl Interactive for Element {
         match &self.inner {
             ElementType::Rectangle(rectangle) => rectangle.get_interaction(),
             ElementType::Label(label) => label.get_interaction(),
+            ElementType::Class(class) => class.get_interaction(),
         }
     }
 
@@ -98,6 +111,7 @@ impl Interactive for Element {
                 rectangle.get_interaction_mut()
             }
             ElementType::Label(label) => label.get_interaction_mut(),
+            ElementType::Class(class) => class.get_interaction_mut(),
         }
     }
 
@@ -109,6 +123,9 @@ impl Interactive for Element {
             ElementType::Label(label) => {
                 label.adjust_position(delta_x, delta_y)
             }
+            ElementType::Class(class) => {
+                class.adjust_position(delta_x, delta_y)
+            }
         }
     }
 
@@ -116,6 +133,7 @@ impl Interactive for Element {
         match &mut self.inner {
             ElementType::Rectangle(rectangle) => rectangle.click(x, y),
             ElementType::Label(label) => label.click(x, y),
+            ElementType::Class(class) => class.click(x, y),
         }
     }
 }
@@ -134,6 +152,15 @@ impl From<Label> for Element {
         Self {
             id: Id::default(),
             inner: ElementType::Label(value),
+        }
+    }
+}
+
+impl From<Class> for Element {
+    fn from(value: Class) -> Self {
+        Self {
+            id: Id::default(),
+            inner: ElementType::Class(value),
         }
     }
 }

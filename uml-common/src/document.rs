@@ -63,6 +63,7 @@ impl Document {
             u32::MAX,
             self.color,
             None,
+            None,
         )
         .into();
 
@@ -82,8 +83,9 @@ impl Document {
             for col in -1..100 {
                 let x = (row as f64 * SPACE) + offx;
                 let y = (col as f64 * SPACE) + offy;
-                let rect =
-                    Rectangle::new(x as _, y as _, SIZE, SIZE, dot_color, None);
+                let rect = Rectangle::new(
+                    x as _, y as _, SIZE, SIZE, dot_color, None, None,
+                );
                 rect.draw_fixed(canvas);
             }
         }

@@ -9,8 +9,29 @@ use crate::{
     stroke::Stroke,
 };
 
+use super::Rectangle;
+
+const DEFAULT_COLOR: Color = const {
+    Color::Rgb {
+        red: 248,
+        green: 248,
+        blue: 248,
+    }
+};
+
+const DEFAULT_STROKE: Stroke = const {
+    Stroke::new(
+        2,
+        Color::Rgb {
+            red: 210,
+            green: 210,
+            blue: 210,
+        },
+    )
+};
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct Rectangle {
+pub struct Class {
     x: i32,
     y: i32,
     width: u32,
@@ -22,16 +43,18 @@ pub struct Rectangle {
     interaction_state: InteractionState,
 }
 
-impl Rectangle {
+impl Class {
     pub fn new(
         x: i32,
         y: i32,
         width: u32,
         height: u32,
-        color: Color,
-        radius: Option<u32>,
+        color: Option<Color>,
         stroke: Option<Stroke>,
+        radius: Option<u32>,
     ) -> Self {
+        let color = color.unwrap_or(DEFAULT_COLOR);
+
         Self {
             x,
             y,
@@ -73,14 +96,24 @@ impl Rectangle {
     }
 }
 
-impl Drawable for Rectangle {
+impl Drawable for Class {
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
-        let copy = *self;
-        canvas.draw_rectangle(copy, camera);
+        let stroke = self.stroke.unwrap_or(DEFAULT_STROKE);
+        let rect = Rectangle::new(
+            self.x,
+            self.y,
+            self.width,
+            self.height,
+            self.color,
+            self.radius,
+            Some(stroke),
+        );
+
+        rect.draw(canvas, camera);
     }
 }
 
-impl Interactive for Rectangle {
+impl Interactive for Class {
     fn get_interaction(&self) -> InteractionState {
         self.interaction_state
     }

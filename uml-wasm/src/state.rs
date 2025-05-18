@@ -9,10 +9,9 @@ use gloo::{net::websocket::Message, timers::callback::Timeout};
 use std::{cell::RefCell, collections::HashSet, thread_local};
 use uml_common::{
     camera::Camera,
-    color::BLACK,
     document::Document,
     drawable::Drawable,
-    elements::{Info, Rectangle, TextProperties},
+    elements::{Class, Info, TextProperties},
     id::Id,
     interaction::Interactive,
 };
@@ -87,9 +86,9 @@ impl State {
                     (Some(doc), "a", DragState::None) => {
                         let x = self.cursor_pos.0 + self.camera.x() as i32;
                         let y = self.cursor_pos.1 + self.camera.y() as i32;
-                        let rect =
-                            Rectangle::new(x, y, 100, 100, BLACK, Some(3));
-                        doc.add_element(rect);
+                        let class =
+                            Class::new(x, y, 100, 100, None, None, Some(3));
+                        doc.add_element(class);
                     }
                     _ => (),
                 }

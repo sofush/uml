@@ -7,3 +7,4 @@ pub mod elements;
 pub mod id;
 pub mod interaction;
 pub mod size;
+pub mod stroke;
