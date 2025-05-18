@@ -87,7 +87,7 @@ async fn handle_event(
             json,
             document,
         }) => {
-            log::debug!("Client with ID {} received a message.", recipient);
+            log::trace!("Client with ID {} received a message.", recipient);
             *latest_document = document;
 
             for handler in handlers {
