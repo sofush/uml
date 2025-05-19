@@ -101,15 +101,15 @@ impl DragHandler {
 
         match self.state {
             DragState::None => {
-                if !self.left_button && old_state.left_button {
-                    return Outcome::None;
-                }
-
                 if self.translate_key {
                     if self.left_button {
                         self.state = DragState::Camera;
                     }
 
+                    return Outcome::None;
+                }
+
+                if !self.left_button {
                     return Outcome::None;
                 }
 
@@ -135,32 +135,37 @@ impl DragHandler {
                     y: -delta_y,
                 }
             }
-            DragState::PressingElement { id }
-            | DragState::DraggingElement { id } => {
+            DragState::PressingElement { id } => {
+                if self.x != old_state.x || self.y != old_state.y {
+                    self.state = DragState::DraggingElement { id };
+                    Outcome::MoveElement {
+                        id,
+                        x: delta_x,
+                        y: delta_y,
+                    }
+                } else if !self.left_button {
+                    self.state = DragState::None;
+                    Outcome::ClickElement {
+                        id,
+                        x: self.x + camera.x() as i32,
+                        y: self.y + camera.y() as i32,
+                    }
+                } else {
+                    Outcome::None
+                }
+            }
+            DragState::DraggingElement { id } => {
                 if !self.left_button {
                     self.state = DragState::None;
-
-                    if matches!(self.state, DragState::PressingElement { .. }) {
-                        return Outcome::ClickElement {
-                            id,
-                            x: self.x,
-                            y: self.y,
-                        };
+                    Outcome::None
+                } else if delta_x != 0 || delta_y != 0 {
+                    Outcome::MoveElement {
+                        id,
+                        x: delta_x,
+                        y: delta_y,
                     }
-
-                    return Outcome::None;
-                }
-
-                if delta_x == 0 && delta_y == 0 {
-                    return Outcome::None;
-                }
-
-                self.state = DragState::DraggingElement { id };
-
-                Outcome::MoveElement {
-                    id,
-                    x: delta_x,
-                    y: delta_y,
+                } else {
+                    Outcome::None
                 }
             }
         }
