@@ -9,7 +9,7 @@ use crate::{
     stroke::Stroke,
 };
 
-use super::Rectangle;
+use super::{Label, Rectangle, TextProperties};
 
 const DEFAULT_COLOR: Color = const {
     Color::Rgb {
@@ -41,15 +41,18 @@ const HIGHLIGHT_STROKE: Stroke = const {
     )
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Class {
     x: i32,
     y: i32,
-    width: u32,
-    height: u32,
+
     color: Color,
     radius: Option<u32>,
     stroke: Option<Stroke>,
+    margin: u32,
+
+    title: Option<Label>,
+
     #[serde(skip)]
     interaction_state: InteractionState,
 }
@@ -58,8 +61,6 @@ impl Class {
     pub fn new(
         x: i32,
         y: i32,
-        width: u32,
-        height: u32,
         color: Option<Color>,
         stroke: Option<Stroke>,
         radius: Option<u32>,
@@ -69,11 +70,11 @@ impl Class {
         Self {
             x,
             y,
-            width,
-            height,
             color,
             radius,
             stroke,
+            margin: 20,
+            title: None,
             interaction_state: InteractionState::default(),
         }
     }
@@ -86,12 +87,18 @@ impl Class {
         self.y
     }
 
-    pub fn width(&self) -> u32 {
-        self.width
+    pub fn width(&self) -> Option<u32> {
+        self.title
+            .as_ref()
+            .and_then(|t| t.width())
+            .map(|w| w + 2 * self.margin)
     }
 
-    pub fn height(&self) -> u32 {
-        self.height
+    pub fn height(&self) -> Option<u32> {
+        self.title
+            .as_ref()
+            .and_then(|t| t.height())
+            .map(|h| h + 2 * self.margin)
     }
 
     pub fn color(&self) -> Color {
@@ -108,24 +115,58 @@ impl Class {
 }
 
 impl Drawable for Class {
+    fn initalize(&mut self, canvas: &impl Canvas) {
+        let props = TextProperties::new(20.0, "arial");
+        let mut label = Label::new(
+            self.x + self.margin as i32,
+            self.y + self.margin as i32,
+            "Test class",
+            props,
+            Color::Rgb {
+                red: 255,
+                green: 0,
+                blue: 0,
+            },
+        );
+        label.initalize(canvas);
+        self.title = Some(label);
+        log::error!("Set title.");
+    }
+
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
+        let Some(title) = &self.title else {
+            log::error!("Cannot draw uninitialized class.");
+            return;
+        };
+
+        let Some(width) = title.width() else {
+            log::error!("Class title does not have a width.");
+            return;
+        };
+
+        let Some(height) = title.height() else {
+            log::error!("Class title does not have a height.");
+            return;
+        };
+
         let stroke = if self.is_hovered() {
             HIGHLIGHT_STROKE
         } else {
-            self.stroke.unwrap_or(DEFAULT_STROKE)
+            DEFAULT_STROKE
         };
 
-        let rect = Rectangle::new(
+        let bg = Rectangle::new(
             self.x,
             self.y,
-            self.width,
-            self.height,
-            self.color,
-            self.radius,
+            width + 2 * self.margin,
+            height + 2 * self.margin,
+            DEFAULT_COLOR,
+            Some(2),
             Some(stroke),
         );
 
-        rect.draw(canvas, camera);
+        bg.draw(canvas, camera);
+        title.draw(canvas, camera);
     }
 }
 
@@ -141,5 +182,9 @@ impl Interactive for Class {
     fn adjust_position(&mut self, delta_x: i32, delta_y: i32) {
         self.x += delta_x;
         self.y += delta_y;
+
+        if let Some(title) = &mut self.title {
+            title.adjust_position(delta_x, delta_y);
+        }
     }
 }

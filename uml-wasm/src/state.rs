@@ -12,7 +12,8 @@ use crate::{
 use gloo::{net::websocket::Message, utils::document};
 use std::{cell::RefCell, thread_local};
 use uml_common::{
-    camera::Camera, document::Document, interaction::Interactive,
+    camera::Camera, document::Document, drawable::Drawable,
+    interaction::Interactive,
 };
 use wasm_bindgen::JsCast as _;
 
@@ -147,8 +148,15 @@ impl State {
             Outcome::UpdateInfo { visible } => {
                 self.update_info_element(visible)
             }
-            Outcome::UpdateDocument(document) => self.document = document,
-            Outcome::AddElement(element) => {
+            Outcome::UpdateDocument(mut document) => {
+                for el in document.elements_mut() {
+                    el.initalize(&self.canvas);
+                }
+
+                self.document = document;
+            }
+            Outcome::AddElement(mut element) => {
+                element.initalize(&self.canvas);
                 self.document.elements_mut().push(element);
             }
             Outcome::HoverElement { id, hovered } => {

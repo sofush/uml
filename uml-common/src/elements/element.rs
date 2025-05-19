@@ -41,21 +41,24 @@ impl Element {
     }
 
     pub fn cursor_intersects(&self, x: i32, y: i32) -> bool {
-        let (l, t, r, b) = match self.inner {
+        let (l, t, r, b) = match &self.inner {
             ElementType::Rectangle(r) => (
                 r.x(),
                 r.y(),
                 r.x() + r.width() as i32,
                 r.y() + r.height() as i32,
             ),
-            ElementType::Label(_) => {
-                return false;
-            }
+            ElementType::Label(l) => (
+                l.x(),
+                l.y(),
+                l.x() + l.width().unwrap_or(0) as i32,
+                l.y() + l.height().unwrap_or(0) as i32,
+            ),
             ElementType::Class(c) => (
                 c.x(),
                 c.y(),
-                c.x() + c.width() as i32,
-                c.y() + c.height() as i32,
+                c.x() + c.width().unwrap_or(0) as i32,
+                c.y() + c.height().unwrap_or(0) as i32,
             ),
         };
 
@@ -84,6 +87,14 @@ impl Element {
 }
 
 impl Drawable for Element {
+    fn initalize(&mut self, canvas: &impl Canvas) {
+        match &mut self.inner {
+            ElementType::Rectangle(rectangle) => rectangle.initalize(canvas),
+            ElementType::Label(label) => label.initalize(canvas),
+            ElementType::Class(class) => class.initalize(canvas),
+        }
+    }
+
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
         match &self.inner {
             ElementType::Rectangle(rectangle) => rectangle.draw(canvas, camera),

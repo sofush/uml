@@ -14,6 +14,8 @@ use super::TextProperties;
 pub struct Label {
     x: i32,
     y: i32,
+    width: Option<u32>,
+    height: Option<u32>,
     text: String,
     properties: TextProperties,
     color: Color,
@@ -36,6 +38,8 @@ impl Label {
             properties: props,
             color,
             interaction_state: InteractionState::default(),
+            width: None,
+            height: None,
         }
     }
 
@@ -44,7 +48,15 @@ impl Label {
     }
 
     pub fn y(&self) -> i32 {
-        self.y
+        self.y + self.height().unwrap_or(0) as i32
+    }
+
+    pub fn width(&self) -> Option<u32> {
+        self.width
+    }
+
+    pub fn height(&self) -> Option<u32> {
+        self.height
     }
 
     pub fn text(&self) -> &str {
@@ -61,6 +73,17 @@ impl Label {
 }
 
 impl Drawable for Label {
+    fn initalize(&mut self, canvas: &impl Canvas) {
+        let Some(size) = canvas.measure_text(&self.text, &self.properties)
+        else {
+            log::error!("Could not measure size of text.");
+            return;
+        };
+
+        self.width = Some(size.width() as u32);
+        self.height = Some(size.height() as u32);
+    }
+
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
         canvas.draw_text(self, camera);
     }

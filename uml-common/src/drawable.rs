@@ -1,10 +1,11 @@
 use crate::{camera::Camera, canvas::Canvas};
 
+#[allow(unused_variables)]
 pub trait Drawable {
-    #[allow(unused_variables)]
+    fn initalize(&mut self, canvas: &impl Canvas) {}
+
     fn draw(&self, canvas: &impl Canvas, camera: &Camera);
 
-    #[allow(unused_variables)]
     fn draw_fixed(&self, canvas: &impl Canvas) {
         self.draw(canvas, &Camera::default());
     }

@@ -40,7 +40,7 @@ impl KeypressHandler {
         self.pressed = true;
         let x = self.x + camera.x() as i32;
         let y = self.y + camera.y() as i32;
-        let class = Class::new(x, y, 100, 100, None, None, Some(3));
+        let class = Class::new(x, y, None, None, Some(3));
         Outcome::AddElement(class.into())
     }
 }
