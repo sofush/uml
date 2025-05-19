@@ -50,9 +50,11 @@ impl DragHandler {
         let primary_outcome = self.update(old_state, elements, camera);
         let mut outcomes = vec![primary_outcome];
 
-        if self.state != old_state.state {
-            let visible = matches!(self.state, DragState::Camera);
-            outcomes.push(Outcome::UpdateInfo { visible });
+        let is_translating = matches!(self.state, DragState::Camera);
+        if self.state != old_state.state || is_translating {
+            outcomes.push(Outcome::UpdateInfo {
+                visible: is_translating,
+            });
         }
 
         self.cursor = self.get_cursor();
