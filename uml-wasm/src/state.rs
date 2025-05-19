@@ -96,12 +96,11 @@ impl State {
         ));
         outcomes.push(self.websocket_handler.handle(&event));
         outcomes.push(self.keypress_handler.handle(&event, &self.camera));
-
-        self.hover_handler.handle(
+        outcomes.extend_from_slice(&self.hover_handler.handle(
             &event,
             self.document.elements_mut(),
             &self.camera,
-        );
+        ));
 
         let mut sync = false;
 
@@ -151,6 +150,18 @@ impl State {
             Outcome::UpdateDocument(document) => self.document = document,
             Outcome::AddElement(element) => {
                 self.document.elements_mut().push(element);
+            }
+            Outcome::HoverElement { id, hovered } => {
+                let Some(el) = self
+                    .document
+                    .elements_mut()
+                    .iter_mut()
+                    .find(|el| el.id() == id)
+                else {
+                    return;
+                };
+
+                el.get_interaction_mut().set_hover(hovered);
             }
         }
     }

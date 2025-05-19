@@ -1,12 +1,10 @@
-use uml_common::{
-    camera::Camera, elements::Element, id::Id, interaction::Interactive,
-};
+use uml_common::{camera::Camera, elements::Element, id::Id};
 
-use crate::event::Event;
+use crate::event::{Event, Outcome};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct HoverHandler {
-    id: Option<Id>,
+    prev_hovered: Option<Id>,
 }
 
 impl HoverHandler {
@@ -15,9 +13,9 @@ impl HoverHandler {
         event: &Event,
         elements: &mut [Element],
         camera: &Camera,
-    ) {
+    ) -> Vec<Outcome> {
         let Event::Mouse(event) = event else {
-            return;
+            return vec![];
         };
 
         let x = event.x() + camera.x() as i32;
@@ -26,32 +24,34 @@ impl HoverHandler {
         let hovered = elements
             .iter_mut()
             .rev()
-            .find(|e| e.cursor_intersects(x, y));
+            .find(|e| e.cursor_intersects(x, y))
+            .map(|e| e.id());
+
+        self.get_outcomes(hovered)
+    }
+
+    fn get_outcomes(&mut self, hovered: Option<Id>) -> Vec<Outcome> {
+        if hovered == self.prev_hovered {
+            return vec![];
+        }
+
+        let mut outcomes = vec![];
+
+        if let Some(prev) = self.prev_hovered {
+            outcomes.push(Outcome::HoverElement {
+                id: prev,
+                hovered: false,
+            });
+        }
 
         if let Some(hovered) = hovered {
-            if Some(hovered.id()) == self.id {
-                return;
-            }
-
-            hovered.hover_enter();
-            let id = Some(hovered.id());
-
-            if let Some(previous_hovered) =
-                elements.iter_mut().find(|el| Some(el.id()) == self.id)
-            {
-                previous_hovered.hover_leave();
-            }
-
-            self.id = id;
-        } else if let Some(previous_id) = self.id.take() {
-            let Some(previous_hovered) =
-                elements.iter_mut().find(|el| el.id() == previous_id)
-            else {
-                return;
-            };
-
-            previous_hovered.hover_leave();
-            self.id = None;
+            outcomes.push(Outcome::HoverElement {
+                id: hovered,
+                hovered: true,
+            });
         }
+
+        self.prev_hovered = hovered;
+        outcomes
     }
 }
