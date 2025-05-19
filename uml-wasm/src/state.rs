@@ -1,21 +1,18 @@
 use crate::{
-    drag::DragState,
-    event::Event,
+    event::{
+        Event, Outcome,
+        cursor_style::CursorStyle,
+        handler::{
+            DragHandler, HoverHandler, KeypressHandler, WebsocketHandler,
+        },
+    },
     html_canvas::HtmlCanvas,
-    mouse_button::MouseButton,
-    wsclient::{WsClient, WsEvent},
+    wsclient::WsClient,
 };
-use gloo::{
-    net::websocket::Message, timers::callback::Timeout, utils::document,
-};
-use std::{cell::RefCell, collections::HashSet, thread_local};
+use gloo::{net::websocket::Message, utils::document};
+use std::{cell::RefCell, thread_local};
 use uml_common::{
-    camera::Camera,
-    document::Document,
-    drawable::Drawable,
-    elements::{Class, Info, TextProperties},
-    id::Id,
-    interaction::Interactive,
+    camera::Camera, document::Document, interaction::Interactive,
 };
 use wasm_bindgen::JsCast as _;
 
@@ -34,265 +31,145 @@ pub fn handle_event(event: Event) {
 }
 
 pub struct State {
-    document: Option<Document>,
+    document: Document,
+    ws: Option<WsClient>,
+
     canvas: HtmlCanvas,
     camera: Camera,
-    keys_pressed: HashSet<String>,
-    cursor_pos: (i32, i32),
-    mouse_buttons: HashSet<MouseButton>,
-    drag_state: DragState,
-    ws: Option<WsClient>,
+
+    drag_handler: DragHandler,
+    websocket_handler: WebsocketHandler,
+    keypress_handler: KeypressHandler,
+    hover_handler: HoverHandler,
 }
 
 impl State {
     pub fn new(canvas: HtmlCanvas) -> Self {
         Self {
+            document: Document::default(),
             ws: None,
-            document: None,
+
             canvas,
             camera: Camera::default(),
-            keys_pressed: HashSet::new(),
-            mouse_buttons: HashSet::new(),
-            cursor_pos: (0, 0),
-            drag_state: DragState::None,
+
+            drag_handler: DragHandler::default(),
+            websocket_handler: WebsocketHandler::default(),
+            keypress_handler: KeypressHandler::default(),
+            hover_handler: HoverHandler::default(),
         }
     }
 
     pub fn handle_event(&mut self, event: Event) {
         log::trace!("Handling event: {event}...");
 
-        let mut delta_cursor_pos = None;
-
-        match event.clone() {
-            Event::MouseDown { button, .. } => {
-                self.mouse_buttons.insert(button);
-            }
-            Event::MouseUp { button, .. } => {
-                self.mouse_buttons.remove(&button);
-            }
-            Event::MouseMove { x, y }
-            | Event::MouseEnter { x, y }
-            | Event::MouseOut { x, y } => {
-                delta_cursor_pos =
-                    Some((x - self.cursor_pos.0, y - self.cursor_pos.1));
-
-                self.cursor_pos = (x, y);
-                let abs_cursor_pos = self.get_absolute_cursor_pos();
-
-                if let Some(document) = &mut self.document {
-                    let visible = !matches!(&event, Event::MouseOut { .. });
-                    document.update_cursor(abs_cursor_pos, visible);
-                }
-            }
-            Event::KeyDown { key } => {
-                if let (Some(doc), "a", DragState::None) =
-                    (&mut self.document, key.as_str(), self.drag_state)
-                {
-                    let x = self.cursor_pos.0 + self.camera.x() as i32;
-                    let y = self.cursor_pos.1 + self.camera.y() as i32;
-                    let class = Class::new(x, y, 100, 100, None, None, Some(3));
-                    doc.add_element(class);
-                }
-
-                self.keys_pressed.insert(key);
-            }
-            Event::KeyUp { key } => {
-                self.keys_pressed.remove(&key);
-            }
-            Event::Resize => self.canvas.update_size(),
-            Event::Initialize => {
-                self.ws = WsClient::new().ok();
-
-                if self.ws.is_none() {
-                    static DELAY: u32 = 500;
-
-                    log::debug!(
-                        "WebSocket connection failed, retrying in {DELAY}ms..."
-                    );
-
-                    Timeout::new(DELAY, move || {
-                        self::handle_event(Event::Initialize);
-                    })
-                    .forget();
-                }
-            }
-            Event::WebSocket(ev) => match ev {
-                WsEvent::Received(msg) => {
-                    log::trace!("Received WebSocket message: {msg:?}");
-
-                    if let Message::Text(text) = msg {
-                        if let Ok(mut document) =
-                            serde_json::from_str::<Document>(&text)
-                        {
-                            document.set_sync(true);
-                            self.document = Some(document);
-                        }
-                    }
-                }
-                WsEvent::SendError(e) | WsEvent::ReceiveError(e) => {
-                    log::error!("Websocket error: {e:?}");
-                    self.handle_event(Event::Initialize);
-                    return;
-                }
-            },
-            Event::Redraw => {
-                if let Some(document) = &self.document {
-                    document.draw(&self.canvas, &self.camera);
-                }
-
-                if let DragState::Camera = self.drag_state {
-                    let props = TextProperties::new(20.0, "Arial");
-                    let text =
-                        format!("{}x {}y", self.camera.x(), self.camera.y());
-                    let info = Info::new(text, props);
-                    info.draw_fixed(&self.canvas);
-                }
-            }
-        };
-
-        if event.is_mouse() || event.is_keyboard() {
-            let delta_x = delta_cursor_pos.map(|d| d.0).unwrap_or(0);
-            let delta_y = delta_cursor_pos.map(|d| d.1).unwrap_or(0);
-            self.handle_drag(delta_x, delta_y);
+        if let Event::Resize = event {
+            self.canvas.update_size();
         }
 
-        self.sync_document();
+        if let Event::Initialize = event {
+            let ws = match WsClient::new() {
+                Ok(ws) => ws,
+                Err(e) => {
+                    log::error!("Could not connect WebSocket: {e}");
+                    todo!("notify the user and attempt reconnect");
+                }
+            };
+
+            self.ws = Some(ws);
+        }
+
+        if matches!(event, Event::Redraw) {
+            self.update_info_element(None);
+            self.document.draw(&self.canvas, &self.camera);
+            return;
+        }
+
+        let mut outcomes = vec![];
+
+        outcomes.extend_from_slice(&self.drag_handler.handle(
+            &event,
+            self.document.elements_mut(),
+            self.camera,
+        ));
+        outcomes.push(self.websocket_handler.handle(&event));
+        outcomes.push(self.keypress_handler.handle(&event, &self.camera));
+
+        self.hover_handler.handle(
+            &event,
+            self.document.elements_mut(),
+            &self.camera,
+        );
+
+        let mut sync = false;
+
+        for outcome in &outcomes {
+            self.handle_outcome(outcome.clone());
+            sync |= matches!(
+                outcome,
+                Outcome::AddElement(_) | Outcome::MoveElement { .. }
+            );
+        }
+
+        if sync {
+            self.sync_document();
+        }
+    }
+
+    fn handle_outcome(&mut self, outcome: Outcome) {
+        match outcome {
+            Outcome::None => (),
+            Outcome::Translate { x, y } => {
+                self.camera.translate(x as _, y as _);
+            }
+            Outcome::MoveElement { id, x, y } => {
+                if let Some(el) = self
+                    .document
+                    .elements_mut()
+                    .iter_mut()
+                    .find(|e| e.id() == id)
+                {
+                    el.adjust_position(x, y);
+                }
+            }
+            Outcome::ClickElement { id, x, y } => {
+                if let Some(el) = self
+                    .document
+                    .elements_mut()
+                    .iter_mut()
+                    .find(|e| e.id() == id)
+                {
+                    el.click(x - el.x(), y - el.y());
+                }
+            }
+            Outcome::CursorStyle(style) => self.set_cursor(style),
+            Outcome::UpdateInfo { visible } => {
+                self.update_info_element(visible)
+            }
+            Outcome::UpdateDocument(document) => self.document = document,
+            Outcome::AddElement(element) => {
+                self.document.elements_mut().push(element);
+            }
+        }
     }
 
     pub fn sync_document(&mut self) {
-        let Some(document) = &mut self.document else {
-            return;
-        };
-
-        if document.is_sync() {
-            return;
-        }
-
-        log::debug!("Synchronizing document with server.");
+        log::trace!("Synchronizing document with server.");
 
         let Some(ws) = &mut self.ws else {
             log::error!("Could not sync document because ws is None.");
             return;
         };
 
-        let Ok(document_json) = serde_json::to_string(document) else {
+        let Ok(document_json) = serde_json::to_string(&self.document) else {
             log::error!("Serialization of document failed.");
             return;
         };
 
         log::trace!("Attempting to synchronize document.");
         ws.send(vec![Message::Text(document_json)]);
-        document.set_sync(true);
     }
 
-    pub fn handle_drag(&mut self, delta_x: i32, delta_y: i32) {
-        let lmb = self.mouse_buttons.contains(&MouseButton::Left);
-        let translate_key = self.keys_pressed.contains(" ");
-
-        let mut move_element = |id: Id| {
-            if delta_x == 0 && delta_y == 0 {
-                return;
-            }
-
-            let Some(doc) = &mut self.document else {
-                return;
-            };
-
-            let Some(el) =
-                doc.elements_mut().iter_mut().find(|el| el.id() == id)
-            else {
-                return;
-            };
-
-            log::trace!(
-                "Element with ID {} was moved: ({}, {}).",
-                el.id(),
-                delta_x,
-                delta_y
-            );
-            el.adjust_position(delta_x, delta_y);
-            doc.set_sync(false);
-        };
-
-        match self.drag_state {
-            DragState::None if lmb => {
-                if translate_key {
-                    self.set_cursor("grabbing");
-                    self.drag_state = DragState::Camera;
-                    return;
-                }
-
-                let Some(doc) = &self.document else {
-                    return;
-                };
-
-                let abs_cursor_pos = self.get_absolute_cursor_pos();
-
-                if let Some(el) = doc
-                    .elements()
-                    .iter()
-                    .find(|el| el.cursor_intersects(abs_cursor_pos))
-                {
-                    self.drag_state =
-                        DragState::PressingElement { id: el.id() };
-                }
-            }
-            DragState::None => {
-                let cursor = if translate_key { "grab" } else { "default" };
-                self.set_cursor(cursor);
-            }
-            DragState::Camera => {
-                self.camera.translate(-delta_x as _, -delta_y as _);
-                log::trace!("Camera state after translate: {:?}", self.camera);
-
-                if !lmb || !translate_key {
-                    self.set_cursor("default");
-                    self.drag_state = DragState::None;
-                }
-            }
-            DragState::PressingElement { id } => {
-                if lmb {
-                    if delta_x == 0 && delta_y == 0 {
-                        return;
-                    }
-
-                    move_element(id);
-                    self.drag_state = DragState::DraggingElement { id };
-                    return;
-                }
-
-                let (mut x, mut y) = self.get_absolute_cursor_pos();
-
-                let Some(doc) = &mut self.document else {
-                    return;
-                };
-
-                if let Some(el) =
-                    doc.elements_mut().iter_mut().find(|el| el.id() == id)
-                {
-                    x -= el.x();
-                    y -= el.y();
-                    el.click(x, y);
-                    log::debug!("Element with ID {} was clicked.", el.id());
-                }
-
-                self.drag_state = DragState::None;
-            }
-            DragState::DraggingElement { id } => {
-                if !lmb {
-                    self.drag_state = DragState::None;
-                    if let Some(doc) = self.document.as_mut() {
-                        doc.set_sync(false)
-                    };
-                    return;
-                }
-
-                move_element(id);
-            }
-        }
-    }
-
-    pub fn set_cursor(&self, value: &str) {
+    pub fn set_cursor(&self, cursor: CursorStyle) {
         let d = document();
         let Some(canvas) = d.get_element_by_id("canvas") else {
             log::error!("Could not find canvas HTML element.");
@@ -304,15 +181,19 @@ impl State {
             return;
         };
 
+        let value = match cursor {
+            CursorStyle::Default => "default",
+            CursorStyle::Grab => "grab",
+            CursorStyle::Grabbing => "grabbing",
+        };
+
         if el.style().set_property("cursor", value).is_err() {
             log::error!("Could not set cursor style.");
         }
     }
 
-    pub fn get_absolute_cursor_pos(&self) -> (i32, i32) {
-        (
-            self.cursor_pos.0 + self.camera.x() as i32,
-            self.cursor_pos.1 + self.camera.y() as i32,
-        )
+    pub fn update_info_element(&mut self, visible: impl Into<Option<bool>>) {
+        let text = format!("{}x {}y", self.camera.x(), self.camera.y());
+        self.document.update_info(visible.into(), text);
     }
 }

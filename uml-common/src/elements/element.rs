@@ -40,10 +40,7 @@ impl Element {
         }
     }
 
-    pub fn cursor_intersects(&self, cursor_pos: (i32, i32)) -> bool {
-        let cx = cursor_pos.0;
-        let cy = cursor_pos.1;
-
+    pub fn cursor_intersects(&self, x: i32, y: i32) -> bool {
         let (l, t, r, b) = match self.inner {
             ElementType::Rectangle(r) => (
                 r.x(),
@@ -62,7 +59,7 @@ impl Element {
             ),
         };
 
-        cx >= l && cx <= r && cy >= t && cy <= b
+        x >= l && x <= r && y >= t && y <= b
     }
 
     pub fn as_interactive(&self) -> &dyn Interactive {

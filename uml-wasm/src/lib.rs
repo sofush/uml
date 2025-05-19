@@ -1,15 +1,16 @@
-use event::Event;
+use crate::event::Event;
+use crate::mouse_button::MouseButton;
+use crate::state::{SHARED_STATE, State};
+
+use event::{KeyboardEvent, MouseEvent};
 use gloo::{
     events::{EventListener, EventListenerOptions},
     utils::{document, window},
 };
 use html_canvas::HtmlCanvas;
 use log::Level;
-use mouse_button::MouseButton;
-use state::{SHARED_STATE, State};
 use wasm_bindgen::prelude::*;
 
-mod drag;
 mod event;
 mod html_canvas;
 mod mouse_button;
@@ -34,7 +35,7 @@ fn on_mouse_move(callback: impl Fn(Event) + 'static) {
         let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
         let x = event.client_x();
         let y = event.client_y();
-        callback(Event::MouseMove { x, y });
+        callback(MouseEvent::Move { x, y }.into());
     })
 }
 
@@ -46,8 +47,8 @@ fn on_mouse_down(callback: impl Fn(Event) + 'static) {
         let Ok(button) = MouseButton::try_from(event.button()) else {
             return;
         };
-        let event = Event::MouseDown { button, x, y };
-        callback(event);
+        let event = MouseEvent::Down { button, x, y };
+        callback(event.into());
     })
 }
 
@@ -59,8 +60,8 @@ fn on_mouse_up(callback: impl Fn(Event) + 'static) {
         let Ok(button) = MouseButton::try_from(event.button()) else {
             return;
         };
-        let event = Event::MouseUp { x, y, button };
-        callback(event);
+        let event = MouseEvent::Up { x, y, button };
+        callback(event.into());
     })
 }
 
@@ -69,7 +70,7 @@ fn on_mouse_out(callback: impl Fn(Event) + 'static) {
         let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
         let x = event.client_x();
         let y = event.client_y();
-        callback(Event::MouseOut { x, y });
+        callback(MouseEvent::Out { x, y }.into());
     })
 }
 
@@ -78,23 +79,23 @@ fn on_mouse_enter(callback: impl Fn(Event) + 'static) {
         let event = e.dyn_ref::<web_sys::MouseEvent>().unwrap_throw();
         let x = event.client_x();
         let y = event.client_y();
-        callback(Event::MouseEnter { x, y });
+        callback(MouseEvent::Enter { x, y }.into());
     })
 }
 
 fn on_key_down(callback: impl Fn(Event) + 'static) {
     add_event_listener("keydown", move |e| {
         let event = e.dyn_ref::<web_sys::KeyboardEvent>().unwrap_throw();
-        let event = Event::KeyDown { key: event.key() };
-        callback(event);
+        let event = KeyboardEvent::Down { key: event.key() };
+        callback(event.into());
     })
 }
 
 fn on_key_up(callback: impl Fn(Event) + 'static) {
     add_event_listener("keyup", move |e| {
         let event = e.dyn_ref::<web_sys::KeyboardEvent>().unwrap_throw();
-        let event = Event::KeyUp { key: event.key() };
-        callback(event);
+        let event = KeyboardEvent::Up { key: event.key() };
+        callback(event.into());
     })
 }
 
@@ -124,6 +125,7 @@ pub fn on_redraw() {
 #[wasm_bindgen(start)]
 async fn run() -> Result<(), JsValue> {
     console_log::init_with_level(Level::Debug).unwrap();
+    std::panic::set_hook(Box::new(|info| log::error!("{info}")));
 
     let canvas = HtmlCanvas::new();
     canvas.update_size();

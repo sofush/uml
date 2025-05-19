@@ -1,4 +1,4 @@
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Camera {
     x: f64,
     y: f64,

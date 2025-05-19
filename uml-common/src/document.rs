@@ -5,13 +5,14 @@ use crate::{
     canvas::Canvas,
     color::Color,
     drawable::Drawable,
-    elements::{Element, Rectangle},
+    elements::{Element, Info, Rectangle},
     interaction::Interactive,
 };
 
 #[derive(Clone, Debug, PartialEq, Default)]
 struct LocalData {
-    synchronized: bool,
+    show_info: bool,
+    info_element: Info,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -32,21 +33,12 @@ impl Document {
     }
 
     pub fn add_element(&mut self, el: impl Into<Element>) {
-        self.local.synchronized = false;
         self.elements.push(el.into());
     }
 
-    pub fn is_sync(&self) -> bool {
-        self.local.synchronized
-    }
-
-    pub fn set_sync(&mut self, value: bool) {
-        self.local.synchronized = value;
-    }
-
-    pub fn update_cursor(&mut self, cursor_pos: (i32, i32), visible: bool) {
+    pub fn update_cursor(&mut self, x: i32, y: i32, visible: bool) {
         for el in &mut self.elements {
-            match (visible, el.is_hovered(), el.cursor_intersects(cursor_pos)) {
+            match (visible, el.is_hovered(), el.cursor_intersects(x, y)) {
                 (true, true, false) => el.hover_leave(),
                 (true, false, true) => el.hover_enter(),
                 (false, true, _) => el.hover_leave(),
@@ -93,6 +85,21 @@ impl Document {
         for element in &self.elements {
             element.draw(canvas, camera);
         }
+
+        if self.local.show_info {
+            self.local.info_element.draw_fixed(canvas);
+        }
+    }
+
+    pub fn update_info(
+        &mut self,
+        visible: impl Into<Option<bool>>,
+        text: String,
+    ) {
+        if let Some(visible) = visible.into() {
+            self.local.show_info = visible;
+        }
+        self.local.info_element.set_text(text);
     }
 }
 
@@ -105,7 +112,10 @@ impl Default for Document {
                 blue: 240,
             },
             elements: Default::default(),
-            local: LocalData { synchronized: true },
+            local: LocalData {
+                show_info: false,
+                info_element: Info::default(),
+            },
         }
     }
 }

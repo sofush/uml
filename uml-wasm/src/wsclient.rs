@@ -16,6 +16,7 @@ pub enum WsEvent {
     SendError(Rc<WebSocketError>),
 }
 
+#[derive(Debug)]
 pub struct WsClient {
     writer: Rc<Mutex<SplitSink<WebSocket, Message>>>,
 }

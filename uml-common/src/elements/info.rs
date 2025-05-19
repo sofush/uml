@@ -5,7 +5,7 @@ use crate::{
 
 use super::{Label, Rectangle, TextProperties};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Info {
     text: String,
     props: TextProperties,
@@ -14,6 +14,10 @@ pub struct Info {
 impl Info {
     pub fn new(text: String, props: TextProperties) -> Self {
         Self { text, props }
+    }
+
+    pub fn set_text(&mut self, value: String) {
+        self.text = value;
     }
 }
 
@@ -54,5 +58,14 @@ impl Drawable for Info {
             BLACK,
         );
         label.draw_fixed(canvas);
+    }
+}
+
+impl Default for Info {
+    fn default() -> Self {
+        Self {
+            text: String::new(),
+            props: TextProperties::new(20.0, "Serif"),
+        }
     }
 }
