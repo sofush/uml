@@ -64,6 +64,8 @@ impl State {
 
         if let Event::Resize = event {
             self.canvas.update_size();
+            self.document.draw(&self.canvas, &self.camera);
+            return;
         }
 
         if let Event::Initialize = event {
@@ -76,10 +78,6 @@ impl State {
             };
 
             self.ws = Some(ws);
-        }
-
-        if matches!(event, Event::Redraw) {
-            self.update_info_element(None);
             self.document.draw(&self.canvas, &self.camera);
             return;
         }
@@ -101,6 +99,7 @@ impl State {
         );
 
         let mut sync = false;
+        let mut redraw = false;
 
         for outcome in &outcomes {
             self.handle_outcome(outcome.clone());
@@ -108,10 +107,23 @@ impl State {
                 outcome,
                 Outcome::AddElement(_) | Outcome::MoveElement { .. }
             );
+            redraw |= matches!(
+                outcome,
+                Outcome::AddElement(_)
+                    | Outcome::MoveElement { .. }
+                    | Outcome::Translate { .. }
+                    | Outcome::UpdateInfo { .. }
+                    | Outcome::ClickElement { .. }
+                    | Outcome::UpdateDocument(_)
+            );
         }
 
         if sync {
             self.sync_document();
+        }
+
+        if redraw {
+            self.document.draw(&self.canvas, &self.camera);
         }
     }
 
