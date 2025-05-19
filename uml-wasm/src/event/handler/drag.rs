@@ -109,7 +109,7 @@ impl DragHandler {
                     return Outcome::None;
                 }
 
-                if !self.left_button {
+                if !self.left_button || old_state.left_button {
                     return Outcome::None;
                 }
 
