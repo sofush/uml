@@ -1,4 +1,5 @@
 use crate::{
+    dialog,
     event::{
         Event, Outcome,
         cursor_style::CursorStyle,
@@ -53,17 +54,17 @@ impl State {
 
             canvas,
             camera: Camera::default(),
+            redraw_scheduled: true,
 
             drag_handler: DragHandler::default(),
             websocket_handler: WebsocketHandler::default(),
             keypress_handler: KeypressHandler::default(),
             hover_handler: HoverHandler::default(),
-            redraw_scheduled: true,
         }
     }
 
     pub fn handle_event(&mut self, event: Event) {
-        log::trace!("Handling event: {event}...");
+        log::trace!("Handling event: {event:?}...");
 
         if let Event::Redraw = event {
             if !self.redraw_scheduled {
@@ -92,6 +93,25 @@ impl State {
 
             self.ws = Some(ws);
             self.document.draw(&self.canvas, &self.camera);
+            return;
+        }
+
+        if let Event::PromptResponse {
+            element_id,
+            response,
+        } = event
+        {
+            if let Some(el) = self
+                .document
+                .elements_mut()
+                .iter_mut()
+                .find(|el| el.id() == element_id)
+            {
+                el.prompt(response);
+            }
+
+            self.redraw_scheduled = true;
+            self.sync_document();
             return;
         }
 
@@ -149,7 +169,9 @@ impl State {
                     .iter_mut()
                     .find(|e| e.id() == id)
                 {
-                    el.click(x - el.x(), y - el.y());
+                    if let Some(prompt) = el.click(x - el.x(), y - el.y()) {
+                        dialog::activate(el.id(), prompt);
+                    }
                 }
             }
             Outcome::CursorStyle(style) => self.set_cursor(style),

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -6,6 +8,7 @@ use crate::{
     color::Color,
     drawable::Drawable,
     interaction::{InteractionState, Interactive},
+    prompt::{Prompt, PromptResponse},
     stroke::Stroke,
 };
 
@@ -124,16 +127,19 @@ impl Class {
 
 impl Drawable for Class {
     fn initalize(&mut self, canvas: &impl Canvas) {
-        let props = TextProperties::new(20.0, "sans-serif");
-        let mut label = Label::new(
-            self.x + self.margin as i32,
-            self.y + self.margin as i32,
-            "Test class",
-            props,
-            TITLE_COLOR,
-        );
-        label.initalize(canvas);
-        self.title = Some(label);
+        match self.title.as_mut() {
+            Some(t) => t.initalize(canvas),
+            None => {
+                let props = TextProperties::new(20.0, "sans-serif");
+                self.title = Some(Label::new(
+                    self.x + self.margin as i32,
+                    self.y + self.margin as i32,
+                    "Test class",
+                    props,
+                    TITLE_COLOR,
+                ));
+            }
+        }
     }
 
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
@@ -188,6 +194,27 @@ impl Interactive for Class {
 
         if let Some(title) = &mut self.title {
             title.adjust_position(delta_x, delta_y);
+        }
+    }
+
+    #[allow(unused_variables)]
+    fn click(&mut self, x: i32, y: i32) -> Option<Prompt> {
+        Some(Prompt::Text {
+            explanation: "Provide this class with a new title".into(),
+            placeholder: "Class title".into(),
+            button_text: "Save".into(),
+            metadata: Rc::new(()),
+        })
+    }
+
+    fn prompt(&mut self, response: PromptResponse) {
+        let PromptResponse::Text {
+            response,
+            metadata: _,
+        } = response;
+
+        if let Some(title) = self.title.as_mut() {
+            title.set_text(response);
         }
     }
 }

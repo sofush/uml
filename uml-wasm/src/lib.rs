@@ -11,6 +11,7 @@ use html_canvas::HtmlCanvas;
 use log::Level;
 use wasm_bindgen::prelude::*;
 
+mod dialog;
 mod event;
 mod html_canvas;
 mod mouse_button;

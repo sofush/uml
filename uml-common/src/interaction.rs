@@ -1,3 +1,5 @@
+use crate::prompt::{Prompt, PromptResponse};
+
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct InteractionState {
     hover: bool,
@@ -19,7 +21,12 @@ pub trait Interactive {
     fn adjust_position(&mut self, delta_x: i32, delta_y: i32);
 
     #[allow(unused_variables)]
-    fn click(&mut self, x: i32, y: i32) {}
+    fn click(&mut self, x: i32, y: i32) -> Option<Prompt> {
+        None
+    }
+
+    #[allow(unused_variables)]
+    fn prompt(&mut self, response: PromptResponse) {}
 
     fn hover_enter(&mut self) {
         self.get_interaction_mut().set_hover(true);

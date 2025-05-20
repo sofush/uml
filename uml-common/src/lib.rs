@@ -6,5 +6,6 @@ pub mod drawable;
 pub mod elements;
 pub mod id;
 pub mod interaction;
+pub mod prompt;
 pub mod size;
 pub mod stroke;

@@ -1,12 +1,17 @@
+use std::collections::HashSet;
+
 use uml_common::{camera::Camera, elements::Class};
 
-use crate::event::{Event, KeyboardEvent, Outcome};
+use crate::{
+    dialog,
+    event::{Event, KeyboardEvent, Outcome},
+};
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct KeypressHandler {
     x: i32,
     y: i32,
-    pressed: bool,
+    keys: HashSet<String>,
 }
 
 impl KeypressHandler {
@@ -21,26 +26,32 @@ impl KeypressHandler {
             return Outcome::None;
         };
 
-        if let KeyboardEvent::Up { key } = event {
-            if key == "a" && self.pressed {
-                self.pressed = false;
+        let key = match event {
+            KeyboardEvent::Down { key } => {
+                self.keys.insert(key.to_string());
+                return Outcome::None;
             }
+            KeyboardEvent::Up { key } => {
+                if !self.keys.remove(key) {
+                    return Outcome::None;
+                }
 
-            return Outcome::None;
-        }
-
-        let KeyboardEvent::Down { key } = event else {
-            return Outcome::None;
+                key.as_str()
+            }
         };
 
-        if key != "a" || self.pressed {
-            return Outcome::None;
+        match key {
+            "a" => {
+                let x = self.x + camera.x() as i32;
+                let y = self.y + camera.y() as i32;
+                let class = Class::new(x, y, None, None, Some(3));
+                Outcome::AddElement(class.into())
+            }
+            "Escape" => {
+                dialog::close_all();
+                Outcome::None
+            }
+            _ => Outcome::None,
         }
-
-        self.pressed = true;
-        let x = self.x + camera.x() as i32;
-        let y = self.y + camera.y() as i32;
-        let class = Class::new(x, y, None, None, Some(3));
-        Outcome::AddElement(class.into())
     }
 }

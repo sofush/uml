@@ -1,8 +1,10 @@
 use std::fmt::Display;
 
+use uml_common::{id::Id, prompt::PromptResponse};
+
 use crate::{mouse_button::MouseButton, wsclient::WsEvent};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum MouseEvent {
     Down { button: MouseButton, x: i32, y: i32 },
     Up { button: MouseButton, x: i32, y: i32 },
@@ -11,13 +13,13 @@ pub enum MouseEvent {
     Enter { x: i32, y: i32 },
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum KeyboardEvent {
     Down { key: String },
     Up { key: String },
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Event {
     Resize,
     Initialize,
@@ -25,6 +27,10 @@ pub enum Event {
     Mouse(MouseEvent),
     Keyboard(KeyboardEvent),
     WebSocket(WsEvent),
+    PromptResponse {
+        element_id: Id,
+        response: PromptResponse,
+    },
 }
 
 impl MouseEvent {
@@ -98,20 +104,6 @@ impl Display for KeyboardEvent {
             KeyboardEvent::Up { key } => {
                 f.write_fmt(format_args!("KeyUp(\"{key}\")"))
             }
-        }
-    }
-}
-impl Display for Event {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Event::Resize => f.write_str("Resize"),
-            Event::Initialize => f.write_str("Initialize"),
-            Event::WebSocket(msg) => {
-                f.write_fmt(format_args!("WsMessage({msg:?})"))
-            }
-            Event::Redraw => f.write_str("Redraw"),
-            Event::Mouse(mouse_event) => mouse_event.fmt(f),
-            Event::Keyboard(keyboard_event) => keyboard_event.fmt(f),
         }
     }
 }

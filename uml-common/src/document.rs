@@ -47,7 +47,7 @@ impl Document {
         }
     }
 
-    pub fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
+    pub fn draw(&mut self, canvas: &impl Canvas, camera: &Camera) {
         let clear_rect: Element = Rectangle::new(
             i32::MIN,
             i32::MIN,
@@ -82,7 +82,8 @@ impl Document {
             }
         }
 
-        for element in &self.elements {
+        for element in &mut self.elements {
+            element.initalize(canvas);
             element.draw(canvas, camera);
         }
 

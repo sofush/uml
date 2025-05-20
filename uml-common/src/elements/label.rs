@@ -70,6 +70,10 @@ impl Label {
     pub fn color(&self) -> Color {
         self.color
     }
+
+    pub fn set_text(&mut self, value: String) {
+        self.text = value;
+    }
 }
 
 impl Drawable for Label {

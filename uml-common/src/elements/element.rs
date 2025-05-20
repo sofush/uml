@@ -7,6 +7,7 @@ use crate::{
     drawable::Drawable,
     id::Id,
     interaction::{InteractionState, Interactive},
+    prompt::{Prompt, PromptResponse},
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -137,11 +138,19 @@ impl Interactive for Element {
         }
     }
 
-    fn click(&mut self, x: i32, y: i32) {
+    fn click(&mut self, x: i32, y: i32) -> Option<Prompt> {
         match &mut self.inner {
             ElementType::Rectangle(rectangle) => rectangle.click(x, y),
             ElementType::Label(label) => label.click(x, y),
             ElementType::Class(class) => class.click(x, y),
+        }
+    }
+
+    fn prompt(&mut self, response: PromptResponse) {
+        match &mut self.inner {
+            ElementType::Rectangle(rectangle) => rectangle.prompt(response),
+            ElementType::Label(label) => label.prompt(response),
+            ElementType::Class(class) => class.prompt(response),
         }
     }
 }
