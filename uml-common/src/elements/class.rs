@@ -134,7 +134,6 @@ impl Drawable for Class {
         );
         label.initalize(canvas);
         self.title = Some(label);
-        log::error!("Set title.");
     }
 
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
