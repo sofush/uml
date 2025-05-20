@@ -37,6 +37,7 @@ pub struct State {
 
     canvas: HtmlCanvas,
     camera: Camera,
+    redraw_scheduled: bool,
 
     drag_handler: DragHandler,
     websocket_handler: WebsocketHandler,
@@ -57,6 +58,7 @@ impl State {
             websocket_handler: WebsocketHandler::default(),
             keypress_handler: KeypressHandler::default(),
             hover_handler: HoverHandler::default(),
+            redraw_scheduled: true,
         }
     }
 
@@ -64,6 +66,11 @@ impl State {
         log::trace!("Handling event: {event}...");
 
         if let Event::Redraw = event {
+            if !self.redraw_scheduled {
+                return;
+            }
+
+            self.redraw_scheduled = false;
             self.document.draw(&self.canvas, &self.camera);
             return;
         }
@@ -111,6 +118,7 @@ impl State {
                 outcome,
                 Outcome::AddElement(_) | Outcome::MoveElement { .. }
             );
+            self.redraw_scheduled |= *outcome != Outcome::None;
         }
 
         if sync {
