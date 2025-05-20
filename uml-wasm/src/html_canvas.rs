@@ -1,3 +1,4 @@
+use gloo::utils::window;
 use uml_common::{
     camera::Camera,
     canvas::Canvas,
@@ -33,10 +34,15 @@ impl HtmlCanvas {
     }
 
     pub fn update_size(&self) {
-        let new_height = self.element.offset_height();
-        let new_width = self.element.offset_width();
+        let scale = window().device_pixel_ratio();
+        let new_height = self.element.client_height() as f64 * scale;
+        let new_width = self.element.client_width() as f64 * scale;
         self.element.set_height(new_height as u32);
         self.element.set_width(new_width as u32);
+
+        if let Err(e) = self.context.scale(scale, scale) {
+            log::error!("Could not scale HTML canvas: {e:?}");
+        }
     }
 }
 
