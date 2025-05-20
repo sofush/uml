@@ -41,6 +41,14 @@ const HIGHLIGHT_STROKE: Stroke = const {
     )
 };
 
+const TITLE_COLOR: Color = const {
+    Color::Rgb {
+        red: 31,
+        green: 31,
+        blue: 31,
+    }
+};
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Class {
     x: i32,
@@ -116,17 +124,13 @@ impl Class {
 
 impl Drawable for Class {
     fn initalize(&mut self, canvas: &impl Canvas) {
-        let props = TextProperties::new(20.0, "arial");
+        let props = TextProperties::new(20.0, "sans-serif");
         let mut label = Label::new(
             self.x + self.margin as i32,
             self.y + self.margin as i32,
             "Test class",
             props,
-            Color::Rgb {
-                red: 255,
-                green: 0,
-                blue: 0,
-            },
+            TITLE_COLOR,
         );
         label.initalize(canvas);
         self.title = Some(label);
