@@ -1,0 +1,34 @@
+* {
+	--pico-modal-overlay-backdrop-filter: blur(0.05rem);
+	--pico-modal-overlay-background-color: rgba(255, 255, 255, 0.1);
+}
+
+html,
+body,
+canvas {
+	margin: 0px;
+	padding: 0px;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	position: absolute;
+	z-index: 0;
+}
+
+canvas {
+	background-color: rgb(240, 240, 240);
+}
+
+small.invalid-helper {
+	display: none;
+	color: firebrick;
+}
+
+form:has(input[aria-invalid="true"]) .invalid-helper {
+	display: unset;
+	margin-top: 0px;
+}
+
+form>fieldset {
+	--pico-spacing: 0px;
+}
