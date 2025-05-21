@@ -106,4 +106,9 @@ impl Interactive for Label {
         self.x += delta_x;
         self.y += delta_y;
     }
+
+    fn set_position(&mut self, x: i32, y: i32) {
+        self.x = x;
+        self.y = y;
+    }
 }

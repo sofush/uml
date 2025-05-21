@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct TextProperties {
     size: f32,
     font: String,
+    weight: Option<u32>,
 }
 
 impl TextProperties {
@@ -11,11 +12,18 @@ impl TextProperties {
         Self {
             size,
             font: font.into(),
+            weight: None,
         }
     }
 
     pub fn get_font_string(&self) -> String {
-        format!("{}px {}", self.size, self.font)
+        let weight = self.weight.unwrap_or(400);
+        format!("{} {}px {}", weight, self.size, self.font)
+    }
+
+    pub fn weight(mut self, value: u32) -> Self {
+        self.weight = Some(value);
+        self
     }
 }
 
@@ -24,6 +32,7 @@ impl Default for TextProperties {
         Self {
             size: 20.0,
             font: String::from("Arial,sans-serif"),
+            weight: None,
         }
     }
 }

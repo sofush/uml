@@ -44,13 +44,16 @@ const HIGHLIGHT_STROKE: Stroke = const {
     )
 };
 
-const TITLE_COLOR: Color = const {
+const TEXT_COLOR: Color = const {
     Color::Rgb {
         red: 31,
         green: 31,
         blue: 31,
     }
 };
+
+const MARGIN: u32 = 20;
+const SPACING: u32 = 16;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Class {
@@ -60,9 +63,9 @@ pub struct Class {
     color: Color,
     radius: Option<u32>,
     stroke: Option<Stroke>,
-    margin: u32,
 
     title: Label,
+    attributes: Vec<Label>,
 
     #[serde(skip)]
     interaction_state: InteractionState,
@@ -85,14 +88,29 @@ impl Class {
             color,
             radius,
             stroke,
-            margin: 20,
             interaction_state: InteractionState::default(),
+            attributes: vec![
+                Label::new(
+                    0,
+                    0,
+                    "Attribute 1",
+                    TextProperties::default(),
+                    TEXT_COLOR,
+                ),
+                Label::new(
+                    0,
+                    0,
+                    "Attribute 2",
+                    TextProperties::default(),
+                    TEXT_COLOR,
+                ),
+            ],
             title: Label::new(
-                x,
-                y,
+                0,
+                0,
                 name,
-                TextProperties::default(),
-                TITLE_COLOR,
+                TextProperties::default().weight(700),
+                TEXT_COLOR,
             ),
         }
     }
@@ -106,11 +124,24 @@ impl Class {
     }
 
     pub fn width(&self) -> Option<u32> {
-        self.title.width().map(|w| w + 2 * self.margin)
+        let mut w = self.title.width().map(|w| w + 2 * MARGIN)?;
+
+        for attribute in &self.attributes {
+            w = u32::max(w, attribute.width()? + 2 * MARGIN);
+        }
+
+        Some(w)
     }
 
     pub fn height(&self) -> Option<u32> {
-        self.title.height().map(|h| h + 2 * self.margin)
+        let mut h = self.title.height().map(|h| h + 2 * MARGIN)?;
+
+        for attribute in &self.attributes {
+            h += SPACING;
+            h += attribute.height()?;
+        }
+
+        Some(h)
     }
 
     pub fn color(&self) -> Color {
@@ -128,25 +159,30 @@ impl Class {
 
 impl Drawable for Class {
     fn initalize(&mut self, canvas: &impl Canvas) {
-        self.title = Label::new(
-            self.x + self.margin as i32,
-            self.y + self.margin as i32,
-            self.title.text(),
-            TextProperties::default(),
-            TITLE_COLOR,
-        );
-
         self.title.initalize(canvas);
+
+        let mut offset_y = self.y + MARGIN as i32;
+
+        self.title.set_position(self.x + MARGIN as i32, offset_y);
+
+        offset_y += self.title.height().unwrap_or(0) as i32;
+        offset_y += SPACING as i32;
+
+        for attribute in &mut self.attributes {
+            attribute.initalize(canvas);
+            attribute.set_position(self.x + MARGIN as i32, offset_y);
+            offset_y += attribute.height().unwrap_or(0) as i32 + SPACING as i32;
+        }
     }
 
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
-        let Some(width) = self.title.width() else {
-            log::error!("Class title does not have a width.");
+        let Some(width) = self.width() else {
+            log::error!("Unable to draw class, class does not have a width.");
             return;
         };
 
-        let Some(height) = self.title.height() else {
-            log::error!("Class title does not have a height.");
+        let Some(height) = self.height() else {
+            log::error!("Unable to draw class, class does not have a height.");
             return;
         };
 
@@ -159,8 +195,8 @@ impl Drawable for Class {
         let bg = Rectangle::new(
             self.x,
             self.y,
-            width + 2 * self.margin,
-            height + 2 * self.margin,
+            width,
+            height,
             DEFAULT_COLOR,
             Some(2),
             Some(stroke),
@@ -168,6 +204,10 @@ impl Drawable for Class {
 
         bg.draw(canvas, camera);
         self.title.draw(canvas, camera);
+
+        for attribute in &self.attributes {
+            attribute.draw(canvas, camera);
+        }
     }
 }
 
@@ -184,6 +224,10 @@ impl Interactive for Class {
         self.x += delta_x;
         self.y += delta_y;
         self.title.adjust_position(delta_x, delta_y);
+
+        for attribute in &mut self.attributes {
+            attribute.adjust_position(delta_x, delta_y);
+        }
     }
 
     #[allow(unused_variables)]
