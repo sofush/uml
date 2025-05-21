@@ -220,6 +220,10 @@ impl Interactive for Class {
             metadata: _,
         } = response;
 
+        if response.is_empty() {
+            return;
+        }
+
         if let Some(title) = self.title.as_mut() {
             title.set_text(response);
         }
