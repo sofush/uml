@@ -41,6 +41,12 @@ impl KeypressHandler {
         };
 
         if SHARED_DIALOG.with_borrow(|d| d.is_active()) {
+            if key == "Escape" {
+                SHARED_DIALOG.with_borrow_mut(|d| {
+                    d.deactivate();
+                });
+            }
+
             return Outcome::None;
         }
 
@@ -50,13 +56,6 @@ impl KeypressHandler {
                 let y = self.y + camera.y() as i32;
                 let class = Class::new(x, y, None, None, Some(3));
                 Outcome::AddElement(class.into())
-            }
-            "Escape" => {
-                SHARED_DIALOG.with_borrow_mut(|d| {
-                    d.deactivate();
-                });
-
-                Outcome::None
             }
             _ => Outcome::None,
         }
