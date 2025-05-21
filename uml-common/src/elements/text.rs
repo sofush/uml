@@ -18,3 +18,12 @@ impl TextProperties {
         format!("{}px {}", self.size, self.font)
     }
 }
+
+impl Default for TextProperties {
+    fn default() -> Self {
+        Self {
+            size: 20.0,
+            font: String::from("Arial,sans-serif"),
+        }
+    }
+}

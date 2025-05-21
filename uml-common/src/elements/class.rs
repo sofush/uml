@@ -62,7 +62,7 @@ pub struct Class {
     stroke: Option<Stroke>,
     margin: u32,
 
-    title: Option<Label>,
+    title: Label,
 
     #[serde(skip)]
     interaction_state: InteractionState,
@@ -72,6 +72,7 @@ impl Class {
     pub fn new(
         x: i32,
         y: i32,
+        name: String,
         color: Option<Color>,
         stroke: Option<Stroke>,
         radius: Option<u32>,
@@ -85,8 +86,14 @@ impl Class {
             radius,
             stroke,
             margin: 20,
-            title: None,
             interaction_state: InteractionState::default(),
+            title: Label::new(
+                x,
+                y,
+                name,
+                TextProperties::default(),
+                TITLE_COLOR,
+            ),
         }
     }
 
@@ -99,17 +106,11 @@ impl Class {
     }
 
     pub fn width(&self) -> Option<u32> {
-        self.title
-            .as_ref()
-            .and_then(|t| t.width())
-            .map(|w| w + 2 * self.margin)
+        self.title.width().map(|w| w + 2 * self.margin)
     }
 
     pub fn height(&self) -> Option<u32> {
-        self.title
-            .as_ref()
-            .and_then(|t| t.height())
-            .map(|h| h + 2 * self.margin)
+        self.title.height().map(|h| h + 2 * self.margin)
     }
 
     pub fn color(&self) -> Color {
@@ -127,33 +128,24 @@ impl Class {
 
 impl Drawable for Class {
     fn initalize(&mut self, canvas: &impl Canvas) {
-        match self.title.as_mut() {
-            Some(t) => t.initalize(canvas),
-            None => {
-                let props = TextProperties::new(20.0, "sans-serif");
-                self.title = Some(Label::new(
-                    self.x + self.margin as i32,
-                    self.y + self.margin as i32,
-                    "Test class",
-                    props,
-                    TITLE_COLOR,
-                ));
-            }
-        }
+        self.title = Label::new(
+            self.x + self.margin as i32,
+            self.y + self.margin as i32,
+            self.title.text(),
+            TextProperties::default(),
+            TITLE_COLOR,
+        );
+
+        self.title.initalize(canvas);
     }
 
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
-        let Some(title) = &self.title else {
-            log::error!("Cannot draw uninitialized class.");
-            return;
-        };
-
-        let Some(width) = title.width() else {
+        let Some(width) = self.title.width() else {
             log::error!("Class title does not have a width.");
             return;
         };
 
-        let Some(height) = title.height() else {
+        let Some(height) = self.title.height() else {
             log::error!("Class title does not have a height.");
             return;
         };
@@ -175,7 +167,7 @@ impl Drawable for Class {
         );
 
         bg.draw(canvas, camera);
-        title.draw(canvas, camera);
+        self.title.draw(canvas, camera);
     }
 }
 
@@ -191,20 +183,12 @@ impl Interactive for Class {
     fn adjust_position(&mut self, delta_x: i32, delta_y: i32) {
         self.x += delta_x;
         self.y += delta_y;
-
-        if let Some(title) = &mut self.title {
-            title.adjust_position(delta_x, delta_y);
-        }
+        self.title.adjust_position(delta_x, delta_y);
     }
 
     #[allow(unused_variables)]
     fn click(&mut self, x: i32, y: i32) -> Option<Prompt> {
-        let value = self
-            .title
-            .as_ref()
-            .map(|t| t.text())
-            .unwrap_or("")
-            .to_string();
+        let value = self.title.text().to_string();
 
         Some(Prompt::Text {
             explanation: "Provide this class with a new name".into(),
@@ -224,8 +208,6 @@ impl Interactive for Class {
             return;
         }
 
-        if let Some(title) = self.title.as_mut() {
-            title.set_text(response);
-        }
+        self.title.set_text(response);
     }
 }
