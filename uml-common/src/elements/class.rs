@@ -199,10 +199,17 @@ impl Interactive for Class {
 
     #[allow(unused_variables)]
     fn click(&mut self, x: i32, y: i32) -> Option<Prompt> {
+        let value = self
+            .title
+            .as_ref()
+            .map(|t| t.text())
+            .unwrap_or("")
+            .to_string();
+
         Some(Prompt::Text {
-            explanation: "Provide this class with a new title".into(),
-            placeholder: "Class title".into(),
-            button_text: "Save".into(),
+            explanation: "Provide this class with a new name".into(),
+            placeholder: "Class name".into(),
+            value,
             metadata: Rc::new(()),
         })
     }

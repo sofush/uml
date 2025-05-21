@@ -1,5 +1,5 @@
 use crate::{
-    dialog,
+    dialog::SHARED_DIALOG,
     event::{
         Event, Outcome,
         cursor_style::CursorStyle,
@@ -170,7 +170,9 @@ impl State {
                     .find(|e| e.id() == id)
                 {
                     if let Some(prompt) = el.click(x - el.x(), y - el.y()) {
-                        dialog::activate(el.id(), prompt);
+                        SHARED_DIALOG.with_borrow_mut(|d| {
+                            d.activate(el.id(), prompt);
+                        });
                     }
                 }
             }

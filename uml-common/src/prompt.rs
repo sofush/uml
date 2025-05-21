@@ -5,7 +5,7 @@ pub enum Prompt {
     Text {
         explanation: String,
         placeholder: String,
-        button_text: String,
+        value: String,
         metadata: Rc<dyn Any>,
     },
 }

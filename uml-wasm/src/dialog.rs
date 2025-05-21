@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use gloo::{events::EventListener, utils::document};
 use uml_common::{
     id::Id,
@@ -11,75 +13,104 @@ use crate::{
     state::{self},
 };
 
-pub fn close_all() {
-    let dialogs = document().get_elements_by_tag_name("dialog");
-
-    for i in 0..dialogs.length() {
-        let dialog_item = dialogs.item(i);
-
-        let Some(dialog) = dialog_item
-            .as_ref()
-            .and_then(|el| el.dyn_ref::<HtmlDialogElement>())
-        else {
-            unreachable!()
-        };
-
-        dialog.set_open(false);
-    }
+thread_local! {
+    pub static SHARED_DIALOG: RefCell<Dialog> = const { RefCell::new(Dialog::new()) };
 }
 
-pub fn activate(element_id: Id, prompt: Prompt) {
-    let dialogs = document().get_elements_by_tag_name("dialog");
+#[derive(Default)]
+pub struct Dialog {
+    listener: Option<EventListener>,
+}
 
-    for i in 0..dialogs.length() {
-        let dialog_item = dialogs.item(i);
+impl Dialog {
+    pub const fn new() -> Self {
+        Self { listener: None }
+    }
 
-        let Some(dialog) = dialog_item
-            .as_ref()
-            .and_then(|el| el.dyn_ref::<HtmlDialogElement>())
-        else {
-            unreachable!()
-        };
+    pub fn deactivate(&mut self) {
+        self.listener = None;
+        let dialogs = document().get_elements_by_tag_name("dialog");
 
-        dialog.set_open(true);
+        for i in 0..dialogs.length() {
+            let dialog_item = dialogs.item(i);
 
-        let forms = dialog.get_elements_by_tag_name("form");
-
-        if let Some(form_item) = forms.item(0) {
-            let Some(form) = form_item.dyn_ref::<HtmlFormElement>() else {
+            let Some(dialog) = dialog_item
+                .as_ref()
+                .and_then(|el| el.dyn_ref::<HtmlDialogElement>())
+            else {
                 unreachable!()
             };
 
-            let Some(text) =
-                form_item.get_elements_by_tag_name("input").item(0)
+            dialog.set_open(false);
+        }
+    }
+
+    pub fn activate(&mut self, element_id: Id, prompt: Prompt) {
+        let Prompt::Text {
+            explanation,
+            placeholder,
+            value,
+            metadata,
+        } = prompt;
+        let dialogs = document().get_elements_by_tag_name("dialog");
+
+        for i in 0..dialogs.length() {
+            let dialog_item = dialogs.item(i);
+
+            let Some(dialog) = dialog_item
+                .as_ref()
+                .and_then(|el| el.dyn_ref::<HtmlDialogElement>())
             else {
-                log::warn!("Form has no input element.");
-                continue;
+                unreachable!()
             };
 
-            let text: HtmlInputElement = text.dyn_into().unwrap();
-            let _ = text.focus();
+            dialog.set_open(true);
 
-            EventListener::once(form, "submit", move |_| {
-                state::handle_event(Event::PromptResponse {
-                    element_id,
-                    response: PromptResponse::Text {
-                        response: text.value(),
-                        metadata: prompt.metadata(),
-                    },
-                });
+            let forms = dialog.get_elements_by_tag_name("form");
 
-                let Some(dialog) = dialog_item
-                    .as_ref()
-                    .and_then(|el| el.dyn_ref::<HtmlDialogElement>())
-                else {
-                    return;
+            if let Some(el) =
+                dialog.get_elements_by_class_name("explanation").item(0)
+            {
+                el.set_inner_html(&explanation);
+            }
+
+            if let Some(form_item) = forms.item(0) {
+                let Some(form) = form_item.dyn_ref::<HtmlFormElement>() else {
+                    unreachable!()
                 };
 
-                dialog.set_open(false);
-            })
-            .forget();
-            return;
+                let Some(text) =
+                    form_item.get_elements_by_tag_name("input").item(0)
+                else {
+                    log::warn!("Form has no input element.");
+                    continue;
+                };
+
+                let text: HtmlInputElement = text.dyn_into().unwrap();
+                let _ = text.focus();
+
+                text.set_placeholder(&placeholder);
+                text.set_value(&value);
+
+                let listener = EventListener::once(form, "submit", move |_| {
+                    state::handle_event(Event::PromptResponse {
+                        element_id,
+                        response: PromptResponse::Text {
+                            response: text.value(),
+                            metadata,
+                        },
+                    });
+
+                    SHARED_DIALOG.with_borrow_mut(|d| d.deactivate());
+                });
+
+                self.listener = Some(listener);
+                return;
+            }
         }
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.listener.is_some()
     }
 }

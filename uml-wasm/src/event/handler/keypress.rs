@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use uml_common::{camera::Camera, elements::Class};
 
 use crate::{
-    dialog,
+    dialog::SHARED_DIALOG,
     event::{Event, KeyboardEvent, Outcome},
 };
 
@@ -40,6 +40,10 @@ impl KeypressHandler {
             }
         };
 
+        if SHARED_DIALOG.with_borrow(|d| d.is_active()) {
+            return Outcome::None;
+        }
+
         match key {
             "a" => {
                 let x = self.x + camera.x() as i32;
@@ -48,7 +52,10 @@ impl KeypressHandler {
                 Outcome::AddElement(class.into())
             }
             "Escape" => {
-                dialog::close_all();
+                SHARED_DIALOG.with_borrow_mut(|d| {
+                    d.deactivate();
+                });
+
                 Outcome::None
             }
             _ => Outcome::None,
