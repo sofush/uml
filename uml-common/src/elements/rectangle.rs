@@ -75,8 +75,7 @@ impl Rectangle {
 
 impl Drawable for Rectangle {
     fn draw(&self, canvas: &impl Canvas, camera: &Camera) {
-        let copy = *self;
-        canvas.draw_rectangle(copy, camera);
+        canvas.draw_rectangle(*self, camera);
     }
 }
 
