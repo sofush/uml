@@ -1,5 +1,6 @@
 use actix_web::rt::{self};
 use actix_ws::{AggregatedMessage, Session};
+use futures::future::select_all;
 use futures_util::{StreamExt, stream::FuturesUnordered};
 use tokio::{
     sync::mpsc::{Receiver, Sender},
@@ -9,49 +10,40 @@ use uml_common::document::Document;
 
 use crate::client_handler::{ClientHandler, WsMessage};
 
-pub enum StateEvent {
+enum Event {
     ClientConnected(ClientHandler),
     ClientReceived(WsMessage),
     StopSignal,
 }
 
-async fn read_message(handlers: &mut [ClientHandler]) -> StateEvent {
+async fn read_message(handlers: &mut [ClientHandler]) -> Event {
     if handlers.is_empty() {
-        return futures::future::pending::<StateEvent>().await;
+        return futures::future::pending::<Event>().await;
     }
 
-    let mut readers = FuturesUnordered::new();
-
-    for handler in handlers.iter_mut() {
-        let fut = handler.read();
-        readers.push(fut);
-    }
-
-    let Some(msg) = readers.next().await else {
-        unreachable!("guarded by if-statement");
-    };
-
-    StateEvent::ClientReceived(msg)
+    let messages = handlers.iter_mut().map(|h| Box::pin(h.read()));
+    let (message, ..) = select_all(messages).await;
+    Event::ClientReceived(message)
 }
 
 async fn wait_for_event(
     handlers: &mut [ClientHandler],
     new_clients_rx: &mut Receiver<ClientHandler>,
     stop_signal_rx: &mut Receiver<()>,
-) -> StateEvent {
+) -> Event {
     tokio::select! {
-        read_event = read_message(handlers) => {
-            read_event
+        message = read_message(handlers) => {
+            message
         },
         client_handler = new_clients_rx.recv() => {
             let Some(handler) = client_handler else {
-                return StateEvent::StopSignal;
+                return Event::StopSignal;
             };
 
-            StateEvent::ClientConnected(handler)
+            Event::ClientConnected(handler)
         },
         _ = stop_signal_rx.recv() => {
-            StateEvent::StopSignal
+            Event::StopSignal
         }
     }
 }
@@ -59,10 +51,10 @@ async fn wait_for_event(
 async fn handle_event(
     latest_document: &mut Document,
     handlers: &mut Vec<ClientHandler>,
-    event: StateEvent,
+    event: Event,
 ) {
     match event {
-        StateEvent::ClientConnected(mut client_handler) => {
+        Event::ClientConnected(mut client_handler) => {
             let Ok(json) = serde_json::to_string(&latest_document) else {
                 log::warn!(
                     "Client with ID {} was not sent document, as it could not be deserialized.",
@@ -82,7 +74,7 @@ async fn handle_event(
             log::debug!("Client with ID {} connected!", client_handler.id());
             handlers.push(client_handler);
         }
-        StateEvent::ClientReceived(WsMessage::Document {
+        Event::ClientReceived(WsMessage::Document {
             recipient,
             json,
             document,
@@ -96,7 +88,7 @@ async fn handle_event(
                 }
             }
         }
-        StateEvent::ClientReceived(WsMessage::DeserializeError {
+        Event::ClientReceived(WsMessage::DeserializeError {
             recipient,
             error: _,
         }) => {
@@ -111,7 +103,7 @@ async fn handle_event(
                 log::debug!("Client with ID {} has been removed.", recipient);
             }
         }
-        StateEvent::ClientReceived(WsMessage::Closed { recipient }) => {
+        Event::ClientReceived(WsMessage::Closed { recipient }) => {
             log::debug!(
                 "Removing client with ID {} because it has disconnected.",
                 recipient
@@ -124,7 +116,7 @@ async fn handle_event(
                 log::debug!("Client with ID {} has been removed.", recipient);
             }
         }
-        StateEvent::StopSignal => {
+        Event::StopSignal => {
             log::debug!("Stop signal received, closing connection to clients.");
 
             let mut futures = FuturesUnordered::new();
@@ -188,7 +180,7 @@ impl Default for State {
                 )
                 .await;
 
-                let stop = matches!(event, StateEvent::StopSignal);
+                let stop = matches!(event, Event::StopSignal);
                 handle_event(&mut latest_document, &mut handlers, event).await;
 
                 if stop {
